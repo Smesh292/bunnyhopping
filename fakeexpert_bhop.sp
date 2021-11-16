@@ -41,7 +41,7 @@ float gF_TimeStart[MAXPLAYERS + 1]
 float gF_Time[MAXPLAYERS + 1]
 bool gB_state[MAXPLAYERS + 1]
 char gS_map[192]
-bool gB_mapFinished[MAXPLAYERS + 1]
+//bool gB_mapFinished[MAXPLAYERS + 1]
 bool gB_passDB
 float gF_originStart[3]
 //float gF_boostTime[MAXPLAYERS + 1]
@@ -137,6 +137,7 @@ Handle gH_timerClanTag[MAXPLAYERS + 1]
 //bool gB_teleported[MAXPLAYERS + 1]
 int gI_points[MAXPLAYERS + 1]
 Handle gH_start
+Handle gH_record
 int gI_pointsMaxs = 1
 int gI_lastQuery
 Handle gH_cookie
@@ -209,6 +210,7 @@ public void OnPluginStart()
 	}*/
 	LoadTranslations("test.phrases") //https://wiki.alliedmods.net/Translations_(SourceMod_Scripting)
 	gH_start = CreateGlobalForward("Bhop_Start", ET_Hook, Param_Cell)
+	gH_record = CreateGlobalForward("Bhop_Record", ET_Hook, Param_Cell, Param_Float)
 	RegPluginLibrary("fakeexpert_bhop")
 	gH_cookie = RegClientCookie("vel", "velocity in hint", CookieAccess_Protected)
 	//gH_cookie[1] = RegClientCookie("mls", "mega long stats", CookieAccess_Protected)
@@ -433,6 +435,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 {
 	//CreateNative("Trikz_GetClientButtons", Native_GetClientButtons)
 	//CreateNative("Trikz_GetClientPartner", Native_GetClientPartner)
+	CreateNative("Trikz_GetTimerState", Native_GetTimerState)
 	MarkNativeAsOptional("Trikz_GetEntityFilter")
 	return APLRes_Success
 }
@@ -2161,11 +2164,11 @@ void SQLRecordsTable(Database db, DBResultSet results, const char[] error, any d
 
 Action SDKEndTouch(int entity, int other)
 {
-	if(0 < other <= MaxClients && gB_readyToStart[other])
+	if(0 < other <= MaxClients && gB_readyToStart[other] && !IsFakeClient(other))
 	{
 		gB_state[other] = true
 		//gB_state[gI_partner[other]] = true
-		gB_mapFinished[other] = false
+		//gB_mapFinished[other] = false
 		//gB_mapFinished[gI_partner[other]] = false
 		gF_TimeStart[other] = GetEngineTime()
 		//gF_TimeStart[gI_partner[other]] = GetEngineTime()
@@ -2185,19 +2188,19 @@ Action SDKEndTouch(int entity, int other)
 
 Action SDKStartTouch(int entity, int other)
 {
-	if(0 < other <= MaxClients && !gB_isDevmap)
+	if(0 < other <= MaxClients && !gB_isDevmap && !IsFakeClient(other))
 	{
 		char sTrigger[32]
 		GetEntPropString(entity, Prop_Data, "m_iName", sTrigger, 32)
-		if(StrEqual(sTrigger, "fakeexpert_startzone") && gB_mapFinished[other])
+		if(StrEqual(sTrigger, "fakeexpert_startzone"))
 		{
 			Restart(other) //expert zone idea.
 			//Restart(gI_partner[other])
 		}
 		if(StrEqual(sTrigger, "fakeexpert_endzone"))
 		{
-			gB_mapFinished[other] = true
-			if(gB_mapFinished[other] && gB_state[other])
+			//gB_mapFinished[other] = true
+			if(gB_state[other])
 			{
 				char sQuery[512]
 				int playerid = GetSteamAccountID(other)
@@ -2228,6 +2231,10 @@ Action SDKStartTouch(int entity, int other)
 						gB_isServerRecord = true
 						gF_ServerRecord = gF_Time[other]
 						CreateTimer(60.0, timer_sourcetv, _, TIMER_FLAG_NO_MAPCHANGE)
+						Call_StartForward(gH_record)
+						Call_PushCell(other)
+						Call_PushFloat(gF_Time[other])
+						Call_Finish()
 					}
 					else if((gF_ServerRecord < gF_Time[other] > gF_haveRecord[other]) && gF_haveRecord[other])
 					{
@@ -2336,6 +2343,10 @@ Action SDKStartTouch(int entity, int other)
 					CreateTimer(60.0, timer_sourcetv, _, TIMER_FLAG_NO_MAPCHANGE) //https://forums.alliedmods.net/showthread.php?t=191615
 					Format(sQuery, 512, "INSERT INTO records (playerid, time, finishes, tries, cp1, cp2, cp3, cp4, cp5, cp6, cp7, cp8, cp9, cp10, map, date) VALUES (%i, %f, 1, 1, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, '%s', %i)", playerid, gF_Time[other], gF_TimeCP[1][other], gF_TimeCP[2][other], gF_TimeCP[3][other], gF_TimeCP[4][other], gF_TimeCP[5][other], gF_TimeCP[6][other], gF_TimeCP[7][other], gF_TimeCP[8][other], gF_TimeCP[9][other], gF_TimeCP[10][other], gS_map, GetTime())
 					gD_mysql.Query(SQLInsertRecord, sQuery)
+					Call_StartForward(gH_record)
+					Call_PushCell(other)
+					Call_PushFloat(gF_Time[other])
+					Call_Finish()
 				}
 				gB_state[other] = false
 				//gB_state[gI_partner[other]] = false
@@ -2805,182 +2816,185 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 {
 	//gI_entityFlags[client] = GetEntityFlags(client)
 	//gI_entityButtons[client] = buttons
-	if(buttons & IN_JUMP && IsPlayerAlive(client) && !(GetEntityFlags(client) & FL_ONGROUND) && GetEntProp(client, Prop_Data, "m_nWaterLevel") <= 1 && !(GetEntityMoveType(client) & MOVETYPE_LADDER)) //https://sm.alliedmods.net/new-api/entity_prop_stocks/GetEntityFlags https://forums.alliedmods.net/showthread.php?t=127948
-		buttons &= ~IN_JUMP //https://stackoverflow.com/questions/47981/how-do-you-set-clear-and-toggle-a-single-bit https://forums.alliedmods.net/showthread.php?t=192163
-	//Timer
-	if(gB_state[client])
+	if(!IsFakeClient(client))
 	{
-		gF_Time[client] = GetEngineTime() - gF_TimeStart[client]
-		//https://forums.alliedmods.net/archive/index.php/t-23912.html ShAyA format OneEyed format second
-		int hour = (RoundToFloor(gF_Time[client]) / 3600) % 24 //https://forums.alliedmods.net/archive/index.php/t-187536.html
-		int minute = (RoundToFloor(gF_Time[client]) / 60) % 60
-		int second = RoundToFloor(gF_Time[client]) % 60
-		Format(gS_clanTag[client][1], 256, "%02.i:%02.i:%02.i", hour, minute, second)
-		if(!IsPlayerAlive(client))
+		if(buttons & IN_JUMP && IsPlayerAlive(client) && !(GetEntityFlags(client) & FL_ONGROUND) && GetEntProp(client, Prop_Data, "m_nWaterLevel") <= 1 && !(GetEntityMoveType(client) & MOVETYPE_LADDER)) //https://sm.alliedmods.net/new-api/entity_prop_stocks/GetEntityFlags https://forums.alliedmods.net/showthread.php?t=127948
+			buttons &= ~IN_JUMP //https://stackoverflow.com/questions/47981/how-do-you-set-clear-and-toggle-a-single-bit https://forums.alliedmods.net/showthread.php?t=192163
+		//Timer
+		if(gB_state[client])
 		{
-			ResetFactory(client)
-			//ResetFactory(gI_partner[client])
-		}
-	}
-	/*if(gI_skyBoost[client])
-	{
-		if(gI_skyBoost[client] == 2)
-		{
-			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, gF_skyVel[client])
-			gI_skyBoost[client] = 0
-		}
-		else
-			gI_skyBoost[client] = 2
-	}
-	if(gI_boost[client])
-	{
-		float velocity[3]
-		if(gI_boost[client] == 2)
-		{
-			velocity[0] = gF_velClient[client][0] - gF_velEntity[client][0]
-			velocity[1] = gF_velClient[client][1] - gF_velEntity[client][1]
-			velocity[2] = gF_velEntity[client][2]
-			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, velocity)
-			gI_boost[client] = 3
-		}
-		else if(gI_boost[client] == 3) // let make loop finish and come back to here.
-		{
-			GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", velocity)
-			if(gB_groundBoost[client])
+			gF_Time[client] = GetEngineTime() - gF_TimeStart[client]
+			//https://forums.alliedmods.net/archive/index.php/t-23912.html ShAyA format OneEyed format second
+			int hour = (RoundToFloor(gF_Time[client]) / 3600) % 24 //https://forums.alliedmods.net/archive/index.php/t-187536.html
+			int minute = (RoundToFloor(gF_Time[client]) / 60) % 60
+			int second = RoundToFloor(gF_Time[client]) % 60
+			Format(gS_clanTag[client][1], 256, "%02.i:%02.i:%02.i", hour, minute, second)
+			if(!IsPlayerAlive(client))
 			{
-				velocity[0] += gF_velEntity[client][0]
-				velocity[1] += gF_velEntity[client][1]
-				velocity[2] += gF_velEntity[client][2]
+				ResetFactory(client)
+				//ResetFactory(gI_partner[client])
+			}
+		}
+		/*if(gI_skyBoost[client])
+		{
+			if(gI_skyBoost[client] == 2)
+			{
+				TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, gF_skyVel[client])
+				gI_skyBoost[client] = 0
 			}
 			else
-			{
-				velocity[0] += gF_velEntity[client][0] * 0.135
-				velocity[1] += gF_velEntity[client][1] * 0.135
-			}
-			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, velocity) //https://github.com/tengulawl/scripting/blob/master/boost-fix.sp#L171-L192
-			gI_boost[client] = 0
-			gF_mlsVel[client][1][0] = velocity[0]
-			gF_mlsVel[client][1][1] = velocity[1]
-			MLStats(client)
+				gI_skyBoost[client] = 2
 		}
-	}
-	if(IsPlayerAlive(client) && (gI_partner[client] || gB_isDevmap))
-	{
-		if(buttons & IN_USE)
+		if(gI_boost[client])
 		{
-			if(GetEntProp(client, Prop_Data, "m_afButtonPressed") & IN_USE)
+			float velocity[3]
+			if(gI_boost[client] == 2)
 			{
-				gF_pingTime[client] = GetEngineTime()
-				gB_pingLock[client] = false
+				velocity[0] = gF_velClient[client][0] - gF_velEntity[client][0]
+				velocity[1] = gF_velClient[client][1] - gF_velEntity[client][1]
+				velocity[2] = gF_velEntity[client][2]
+				TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, velocity)
+				gI_boost[client] = 3
+			}
+			else if(gI_boost[client] == 3) // let make loop finish and come back to here.
+			{
+				GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", velocity)
+				if(gB_groundBoost[client])
+				{
+					velocity[0] += gF_velEntity[client][0]
+					velocity[1] += gF_velEntity[client][1]
+					velocity[2] += gF_velEntity[client][2]
+				}
+				else
+				{
+					velocity[0] += gF_velEntity[client][0] * 0.135
+					velocity[1] += gF_velEntity[client][1] * 0.135
+				}
+				TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, velocity) //https://github.com/tengulawl/scripting/blob/master/boost-fix.sp#L171-L192
+				gI_boost[client] = 0
+				gF_mlsVel[client][1][0] = velocity[0]
+				gF_mlsVel[client][1][1] = velocity[1]
+				MLStats(client)
 			}
 		}
-		else
-			if(!gB_pingLock[client])
+		if(IsPlayerAlive(client) && (gI_partner[client] || gB_isDevmap))
+		{
+			if(buttons & IN_USE)
+			{
+				if(GetEntProp(client, Prop_Data, "m_afButtonPressed") & IN_USE)
+				{
+					gF_pingTime[client] = GetEngineTime()
+					gB_pingLock[client] = false
+				}
+			}
+			else
+				if(!gB_pingLock[client])
+					gB_pingLock[client] = true
+			if(!gB_pingLock[client] && GetEngineTime() - gF_pingTime[client] > 0.7)
+			{
 				gB_pingLock[client] = true
-		if(!gB_pingLock[client] && GetEngineTime() - gF_pingTime[client] > 0.7)
+				if(gI_pingModel[client])
+				{
+					if(IsValidEntity(gI_pingModel[client]))
+						RemoveEntity(gI_pingModel[client])
+					gI_pingModel[client] = 0
+					KillTimer(gH_timerPing[client])
+				}
+				gI_pingModel[client] = CreateEntityByName("prop_dynamic_override") //https://www.bing.com/search?q=prop_dynamic_override&cvid=0babe0a3c6cd43aa9340fa9c3c2e0f78&aqs=edge..69i57.409j0j1&pglt=299&FORM=ANNTA1&PC=U531
+				SetEntityModel(gI_pingModel[client], "models/fakeexpert/pingtool/pingtool.mdl")
+				DispatchSpawn(gI_pingModel[client])
+				SetEntProp(gI_pingModel[client], Prop_Data, "m_fEffects", 16) //https://pastebin.com/SdNC88Ma https://developer.valvesoftware.com/wiki/Effect_flags
+				float start[3]
+				float angle[3]
+				float end[3]
+				GetClientEyePosition(client, start)
+				GetClientEyeAngles(client, angle)
+				GetAngleVectors(angle, angle, NULL_VECTOR, NULL_VECTOR)
+				for(int i = 0; i <= 2; i++)
+				{
+					angle[i] *= 8192.0
+					end[i] = start[i] + angle[i] //thanks to rumour for pingtool original code.
+				}
+				TR_TraceRayFilter(start, end, MASK_SOLID, RayType_EndPoint, TraceEntityFilterPlayer, client)
+				if(TR_DidHit())
+				{
+					TR_GetEndPosition(end)
+					float normal[3]
+					TR_GetPlaneNormal(null, normal) //https://github.com/alliedmodders/sourcemod/commit/1328984e0b4cb2ca0ee85eaf9326ab97df910483
+					GetVectorAngles(normal, normal)
+					GetAngleVectors(normal, angle, NULL_VECTOR, NULL_VECTOR)
+					for(int i = 0; i <= 2; i++)
+						end[i] += angle[i]
+					normal[0] -= 270.0
+					SetEntPropVector(gI_pingModel[client], Prop_Data, "m_angRotation", normal)
+				}
+				if(gB_color[client])
+					SetEntityRenderColor(gI_pingModel[client], gI_color[client][0], gI_color[client][1], gI_color[client][2], 255)
+				TeleportEntity(gI_pingModel[client], end, NULL_VECTOR, NULL_VECTOR)
+				//https://forums.alliedmods.net/showthread.php?p=1080444
+				if(gB_color[client])
+				{
+					int color[4]
+					for(int i = 0; i <= 2; i++)
+						color[i] = gI_color[client][i]
+					color[3] = 255
+					TE_SetupBeamPoints(start, end, gI_laserBeam, 0, 0, 0, 0.5, 1.0, 1.0, 0, 0.0, color, 0)
+				}
+				else
+					TE_SetupBeamPoints(start, end, gI_laserBeam, 0, 0, 0, 0.5, 1.0, 1.0, 0, 0.0, {255, 255, 255, 255}, 0)
+				if(LibraryExists("fakeexpert-entityfilter"))
+				{
+					SDKHook(gI_pingModel[client], SDKHook_SetTransmit, SDKSetTransmitPing)
+					gI_pingModelOwner[gI_pingModel[client]] = client
+					int clients[MAXPLAYERS + 1]
+					int count
+					for(int i = 1; i <= MaxClients; i++)
+						if(IsClientInGame(i))
+							if(gI_partner[client] == gI_partner[gI_partner[i]] || i == client)
+								clients[count++] = i
+					TE_Send(clients, count)
+					EmitSound(clients, count, "fakeexpert/pingtool/click.wav", client)
+				}
+				else
+				{
+					TE_SendToAll()
+					EmitSoundToAll("fakeexpert/pingtool/click.wav", client)
+				}
+				gH_timerPing[client] = CreateTimer(3.0, timer_removePing, client, TIMER_FLAG_NO_MAPCHANGE)
+			}
+		}
+		if(!gCV_turboPhysics.BoolValue)
 		{
-			gB_pingLock[client] = true
-			if(gI_pingModel[client])
+			if(IsPlayerAlive(client))
 			{
-				if(IsValidEntity(gI_pingModel[client]))
-					RemoveEntity(gI_pingModel[client])
-				gI_pingModel[client] = 0
-				KillTimer(gH_timerPing[client])
+				if(gB_block[client] && GetEntProp(client, Prop_Data, "m_CollisionGroup") != 5)
+					SetEntProp(client, Prop_Data, "m_CollisionGroup", 5)
+				else if(!gB_block[client] && GetEntProp(client, Prop_Data, "m_CollisionGroup") != 2)
+					SetEntProp(client, Prop_Data, "m_CollisionGroup", 2)
 			}
-			gI_pingModel[client] = CreateEntityByName("prop_dynamic_override") //https://www.bing.com/search?q=prop_dynamic_override&cvid=0babe0a3c6cd43aa9340fa9c3c2e0f78&aqs=edge..69i57.409j0j1&pglt=299&FORM=ANNTA1&PC=U531
-			SetEntityModel(gI_pingModel[client], "models/fakeexpert/pingtool/pingtool.mdl")
-			DispatchSpawn(gI_pingModel[client])
-			SetEntProp(gI_pingModel[client], Prop_Data, "m_fEffects", 16) //https://pastebin.com/SdNC88Ma https://developer.valvesoftware.com/wiki/Effect_flags
-			float start[3]
-			float angle[3]
-			float end[3]
-			GetClientEyePosition(client, start)
-			GetClientEyeAngles(client, angle)
-			GetAngleVectors(angle, angle, NULL_VECTOR, NULL_VECTOR)
-			for(int i = 0; i <= 2; i++)
+		}*/
+		if(gB_DrawZone[client])
+		{
+			if(GetEngineTime() - gF_engineTime >= 0.1)
 			{
-				angle[i] *= 8192.0
-				end[i] = start[i] + angle[i] //thanks to rumour for pingtool original code.
-			}
-			TR_TraceRayFilter(start, end, MASK_SOLID, RayType_EndPoint, TraceEntityFilterPlayer, client)
-			if(TR_DidHit())
-			{
-				TR_GetEndPosition(end)
-				float normal[3]
-				TR_GetPlaneNormal(null, normal) //https://github.com/alliedmodders/sourcemod/commit/1328984e0b4cb2ca0ee85eaf9326ab97df910483
-				GetVectorAngles(normal, normal)
-				GetAngleVectors(normal, angle, NULL_VECTOR, NULL_VECTOR)
-				for(int i = 0; i <= 2; i++)
-					end[i] += angle[i]
-				normal[0] -= 270.0
-				SetEntPropVector(gI_pingModel[client], Prop_Data, "m_angRotation", normal)
-			}
-			if(gB_color[client])
-				SetEntityRenderColor(gI_pingModel[client], gI_color[client][0], gI_color[client][1], gI_color[client][2], 255)
-			TeleportEntity(gI_pingModel[client], end, NULL_VECTOR, NULL_VECTOR)
-			//https://forums.alliedmods.net/showthread.php?p=1080444
-			if(gB_color[client])
-			{
-				int color[4]
-				for(int i = 0; i <= 2; i++)
-					color[i] = gI_color[client][i]
-				color[3] = 255
-				TE_SetupBeamPoints(start, end, gI_laserBeam, 0, 0, 0, 0.5, 1.0, 1.0, 0, 0.0, color, 0)
-			}
-			else
-				TE_SetupBeamPoints(start, end, gI_laserBeam, 0, 0, 0, 0.5, 1.0, 1.0, 0, 0.0, {255, 255, 255, 255}, 0)
-			if(LibraryExists("fakeexpert-entityfilter"))
-			{
-				SDKHook(gI_pingModel[client], SDKHook_SetTransmit, SDKSetTransmitPing)
-				gI_pingModelOwner[gI_pingModel[client]] = client
-				int clients[MAXPLAYERS + 1]
-				int count
+				gF_engineTime = GetEngineTime()
 				for(int i = 1; i <= MaxClients; i++)
 					if(IsClientInGame(i))
-						if(gI_partner[client] == gI_partner[gI_partner[i]] || i == client)
-							clients[count++] = i
-				TE_Send(clients, count)
-				EmitSound(clients, count, "fakeexpert/pingtool/click.wav", client)
+						DrawZone(i, 0.1)
 			}
-			else
-			{
-				TE_SendToAll()
-				EmitSoundToAll("fakeexpert/pingtool/click.wav", client)
-			}
-			gH_timerPing[client] = CreateTimer(3.0, timer_removePing, client, TIMER_FLAG_NO_MAPCHANGE)
 		}
-	}
-	if(!gCV_turboPhysics.BoolValue)
-	{
-		if(IsPlayerAlive(client))
+		/*if(IsClientObserver(client) && GetEntProp(client, Prop_Data, "m_afButtonPressed") & IN_USE) //make able to swtich wtih E to the partner via spectate.
 		{
-			if(gB_block[client] && GetEntProp(client, Prop_Data, "m_CollisionGroup") != 5)
-				SetEntProp(client, Prop_Data, "m_CollisionGroup", 5)
-			else if(!gB_block[client] && GetEntProp(client, Prop_Data, "m_CollisionGroup") != 2)
-				SetEntProp(client, Prop_Data, "m_CollisionGroup", 2)
-		}
-	}*/
-	if(gB_DrawZone[client])
-	{
-		if(GetEngineTime() - gF_engineTime >= 0.1)
+			int observerTarget = GetEntPropEnt(client, Prop_Data, "m_hObserverTarget")
+			int observerMode = GetEntProp(client, Prop_Data, "m_iObserverMode")
+			if(0 < observerTarget <= MaxClients && gI_partner[observerTarget] && IsPlayerAlive(gI_partner[observerTarget]) && observerMode < 7)
+				SetEntPropEnt(client, Prop_Data, "m_hObserverTarget", gI_partner[observerTarget])
+		}*/
+		if(GetEngineTime() - gF_hudTime[client] >= 0.1)
 		{
-			gF_engineTime = GetEngineTime()
-			for(int i = 1; i <= MaxClients; i++)
-				if(IsClientInGame(i))
-					DrawZone(i, 0.1)
+			gF_hudTime[client] = GetEngineTime()
+			Hud(client)
 		}
-	}
-	/*if(IsClientObserver(client) && GetEntProp(client, Prop_Data, "m_afButtonPressed") & IN_USE) //make able to swtich wtih E to the partner via spectate.
-	{
-		int observerTarget = GetEntPropEnt(client, Prop_Data, "m_hObserverTarget")
-		int observerMode = GetEntProp(client, Prop_Data, "m_iObserverMode")
-		if(0 < observerTarget <= MaxClients && gI_partner[observerTarget] && IsPlayerAlive(gI_partner[observerTarget]) && observerMode < 7)
-			SetEntPropEnt(client, Prop_Data, "m_hObserverTarget", gI_partner[observerTarget])
-	}*/
-	if(GetEngineTime() - gF_hudTime[client] >= 0.1)
-	{
-		gF_hudTime[client] = GetEngineTime()
-		Hud(client)
 	}
 	/*if(GetEntityFlags(client) & FL_ONGROUND)
 	{
@@ -3661,6 +3675,15 @@ int Native_GetClientPartner(Handle plugin, int numParams)
 	int client = GetNativeCell(1)
 	return gI_partner[client]
 }*/
+
+int Native_GetTimerState(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1)
+	if(!IsFakeClient(client))
+		return gB_state[client]
+	else
+		return false
+}
 
 Action timer_clearlag(Handle timer)
 {
