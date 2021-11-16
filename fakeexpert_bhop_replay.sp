@@ -213,25 +213,28 @@ void LoadRecord()
 	char sFile[PLATFORM_MAX_PATH]
 	BuildPath(Path_SM, sFile, PLATFORM_MAX_PATH, "data/fakeexpert_bhop/%s.replay", gS_map)
 	File f = OpenFile(sFile, "rb")
-	int frameCount
-	int time
-	f.ReadInt32(frameCount)
-	f.ReadInt32(gI_steam3)
-	f.ReadInt32(time)
-	gI_tick[1] = frameCount
-	any aData[sizeof(eFrame)]
-	delete gA_frameCache
-	gA_frameCache = new ArrayList(sizeof(eFrame), frameCount)
-	for(int i = 0; i < frameCount; i++)
+	if(FileExists(sFile))
 	{
-			if(f.Read(aData, sizeof(eFrame), 4) >= 0)
-				gA_frameCache.SetArray(i, aData, sizeof(eFrame))
+		int frameCount
+		int time
+		f.ReadInt32(frameCount)
+		f.ReadInt32(gI_steam3)
+		f.ReadInt32(time)
+		gI_tick[1] = frameCount
+		any aData[sizeof(eFrame)]
+		delete gA_frameCache
+		gA_frameCache = new ArrayList(sizeof(eFrame), frameCount)
+		for(int i = 0; i < frameCount; i++)
+		{
+				if(f.Read(aData, sizeof(eFrame), 4) >= 0)
+					gA_frameCache.SetArray(i, aData, sizeof(eFrame))
+		}
+		delete f
+		gI_tick[0] = 0
+		char sQuery[512]
+		Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i", gI_steam3)
+		gD_database.Query(SQLGetName, sQuery)
 	}
-	delete f
-	gI_tick[0] = 0
-	char sQuery[512]
-	Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i", gI_steam3)
-	gD_database.Query(SQLGetName, sQuery)
 }
 
 public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float vel[3], const float angles[3], int weapon, int subtype, int cmdnum, int tickcount, int seed, const int mouse[2])
