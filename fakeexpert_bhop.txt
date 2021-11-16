@@ -1,0 +1,40 @@
+"Games"
+{
+	"#default"
+	{
+		"Offsets"
+		{
+			"OS"
+			{
+				"windows"   "1"
+				"linux"     "2"
+			}
+		}
+	}
+	"cstrike"
+	{
+		"Offsets"
+		{
+			"CBasePlayer::UpdateStepSound"
+			{
+				"windows"   "358"
+				"linux"     "359"
+			}
+		}
+		"Signatures"
+		{
+			// search string: "ReloadEffect" to find CWeaponCSBase::SendReloadEvents and then DoAnimationEvent is probably the second to last function called there.
+			"Player::DoAnimationEvent"
+			{
+				"windows"   "\x55\x8B\xEC\x83\xEC\x10\x89\x4D\xFC\x83\x7D\x08\x02"
+				"linux"     "@_ZN9CCSPlayer16DoAnimationEventE17PlayerAnimEvent_ti"
+			}
+			// search string: "-nobots"
+			"BotManager::MaintainBotQuota"
+			{
+				"windows"   "\x55\x8B\xEC\x83\xEC\x14\xFF\x15"
+				"linux"     "@_ZN13CCSBotManager16MaintainBotQuotaEv"
+			}
+		}
+	}
+}
