@@ -212,9 +212,9 @@ void LoadRecord()
 	cvForce.SetInt(1)
 	char sFile[PLATFORM_MAX_PATH]
 	BuildPath(Path_SM, sFile, PLATFORM_MAX_PATH, "data/fakeexpert_bhop/%s.replay", gS_map)
-	File f = OpenFile(sFile, "rb")
 	if(FileExists(sFile))
 	{
+		File f = OpenFile(sFile, "rb")
 		int frameCount
 		int time
 		f.ReadInt32(frameCount)
