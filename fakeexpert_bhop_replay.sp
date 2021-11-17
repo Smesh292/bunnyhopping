@@ -111,6 +111,19 @@ Action timer_bot(Handle timer)
 {
 	if(gB_loaded)
 	{
+		ConVar cvForce = FindConVar("bot_stop")
+		cvForce.SetInt(1)
+		cvForce = FindConVar("bot_join_after_player")
+		cvForce.SetInt(0)
+		cvForce = FindConVar("bot_quota")
+		cvForce.Flags = GetConVarFlags(FindConVar("bot_quota")) &~ FCVAR_NOTIFY
+		cvForce.SetInt(1)
+		cvForce = FindConVar("bot_flipout")
+		cvForce.SetInt(1)
+		cvForce = FindConVar("bot_zombie")
+		cvForce.SetInt(1)
+		cvForce = FindConVar("bot_quota_mode")
+		cvForce.SetString("normal")
 		bool replayRunning
 		for(int i = 1; i <= MaxClients; i++)
 		{
@@ -205,17 +218,6 @@ void SQLGetName(Database db, DBResultSet results, const char[] error, any data)
 
 void LoadRecord()
 {
-	ConVar cvForce = FindConVar("bot_stop")
-	cvForce.SetInt(1)
-	cvForce = FindConVar("bot_join_after_player")
-	cvForce.SetInt(0)
-	cvForce = FindConVar("bot_quota")
-	cvForce.Flags = GetConVarFlags(FindConVar("bot_quota")) &~ FCVAR_NOTIFY
-	cvForce.SetInt(1)
-	cvForce = FindConVar("bot_flipout")
-	cvForce.SetInt(1)
-	cvForce = FindConVar("bot_zombie")
-	cvForce.SetInt(1)
 	char sFile[PLATFORM_MAX_PATH]
 	BuildPath(Path_SM, sFile, PLATFORM_MAX_PATH, "data/fakeexpert_bhop/%s.replay", gS_map)
 	if(FileExists(sFile))
