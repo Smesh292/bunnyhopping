@@ -747,6 +747,7 @@ void createstart()
 	SetEntProp(entity, Prop_Send, "m_nSolidType", 2)
 	SDKHook(entity, SDKHook_StartTouch, SDKStartTouch)
 	SDKHook(entity, SDKHook_EndTouch, SDKEndTouch)
+	SDKHook(entity, SDKHook_Touch, SDKTouch)
 	PrintToServer("Start zone is successfuly setup.")
 	gB_haveZone[0] = true
 }
@@ -1519,6 +1520,21 @@ Action SDKEndTouch(int entity, int other)
 		{
 			gB_cp[i][other] = false
 			gB_cpLock[i][other] = false
+		}
+	}
+}
+
+Action SDKTouch(int entity, int other)
+{
+	if(0 < other <= MaxClients && gB_readyToStart[other] && !IsFakeClient(other) && !gB_isDevmap)
+	{
+		if(GetEntityFlags(other) & FL_ONGROUND)
+		{
+			float vel[3]
+			GetEntPropVector(other, Prop_Data, "m_vecAbsVelocity", vel)
+			float velXY = SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0))
+			if(velXY > 278.0)
+				TeleportEntity(other, NULL_VECTOR, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}))
 		}
 	}
 }
