@@ -362,7 +362,6 @@ void OnSpawn(Event event, const char[] name, bool dontBroadcast)
 	int client = GetClientOfUserId(event.GetInt("userid"))
 	if(GetClientTeam(client) == CS_TEAM_T || GetClientTeam(client) == CS_TEAM_CT)
 	{
-		GivePlayerItem(client, "weapon_flashbang")
 		SDKHook(client, SDKHook_WeaponSwitch, SDKWeaponSwitch)
 		if(IsFakeClient(client))
 		{
@@ -386,44 +385,8 @@ void ApplyFlags(int &flags1, int flags2, int flag)
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
-	if(StrEqual(classname, "flashbang_projectile"))
-		SDKHook(entity, SDKHook_Spawn, SDKProjectile)
-	else if(StrContains(classname, "trigger") != -1)
+	if(StrContains(classname, "trigger") != -1)
 		SDKHook(entity, SDKHook_Touch, SDKTrigger)
-}
-
-Action SDKProjectile(int entity)
-{
-	int client = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity")
-	if(IsValidEntity(entity) && IsValidEntity(client))
-	{
-		SetEntData(client, FindDataMapInfo(client, "m_iAmmo") + 12 * 4, 2) //https://forums.alliedmods.net/showthread.php?t=114527 https://forums.alliedmods.net/archive/index.php/t-81546.html
-		//gB_silentKnife = true
-		FakeClientCommand(client, "use weapon_knife")
-		SetEntProp(client, Prop_Data, "m_bDrawViewmodel", false) //thanks to alliedmodders. 2019 https://forums.alliedmods.net/archive/index.php/t-287052.html
-		ClientCommand(client, "lastinv") //hornet, log idea, main idea Nick Yurevich since 2019, hornet found ClientCommand - lastinv
-		RequestFrame(frame_blockExplosion, entity)
-		CreateTimer(IsFakeClient(client) ? 0.1 : GetClientAvgLatency(client, NetFlow_Both), timer_hideSwtich, client, TIMER_FLAG_NO_MAPCHANGE)
-		CreateTimer(1.5, timer_deleteProjectile, entity, TIMER_FLAG_NO_MAPCHANGE)
-	}
-}
-
-void frame_blockExplosion(int entity)
-{
-	if(IsValidEntity(entity))
-		SetEntProp(entity, Prop_Data, "m_nNextThinkTick", 0) //https://forums.alliedmods.net/showthread.php?t=301667 avoid random blinds.
-}
-
-Action timer_hideSwtich(Handle timer, int client)
-{
-	if(IsClientInGame(client))
-		SetEntProp(client, Prop_Data, "m_bDrawViewmodel", true)
-}
-
-Action timer_deleteProjectile(Handle timer, int entity)
-{
-	if(IsValidEntity(entity))
-		RemoveEntity(entity)
 }
 
 Action SDKWeaponSwitch(int client, int weapon)
