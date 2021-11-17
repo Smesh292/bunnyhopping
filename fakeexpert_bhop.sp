@@ -99,6 +99,7 @@ Handle gH_record
 int gI_pointsMaxs = 1
 int gI_lastQuery
 Handle gH_cookie
+bool gB_clantagOnce[MAXPLAYERS + 1]
 
 public Plugin myinfo =
 {
@@ -399,9 +400,14 @@ Action OnSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"))
 	if(GetClientTeam(client) == CS_TEAM_T || GetClientTeam(client) == CS_TEAM_CT)
+	{
 		SetEntProp(client, Prop_Data, "m_CollisionGroup", 2)
-	if(!gB_isDevmap)
-		CS_GetClientClanTag(client, gS_clanTag[client][0], 256)
+		if(!gB_isDevmap && !gB_clantagOnce[client])
+		{
+			CS_GetClientClanTag(client, gS_clanTag[client][0], 256)
+			gB_clantagOnce[client] = true
+		}
+	}
 }
 
 Action OnDeath(Event event, const char[] name, bool dontBroadcast)
@@ -510,6 +516,7 @@ public void OnClientPutInServer(int client)
 	gI_points[client] = 0
 	if(!gB_haveZone[2])
 		CancelClientMenu(client)
+	gB_clantagOnce[client] = false
 }
 
 public void OnClientCookiesCached(int client)
@@ -1502,7 +1509,7 @@ void SQLRecordsTable(Database db, DBResultSet results, const char[] error, any d
 
 Action SDKEndTouch(int entity, int other)
 {
-	if(0 < other <= MaxClients && gB_readyToStart[other] && !IsFakeClient(other))
+	if(0 < other <= MaxClients && gB_readyToStart[other] && !IsFakeClient(other) && !gB_isDevmap)
 	{
 		gB_state[other] = true
 		gF_TimeStart[other] = GetEngineTime()
@@ -2107,7 +2114,7 @@ Action cmd_devmap(int client, int args)
 		gI_voters = 0
 		for(int i = 1; i <= MaxClients; i++)
 		{
-			if(IsClientInGame(i) && !IsClientSourceTV(i))
+			if(IsClientInGame(i) && !IsClientSourceTV(i) && !IsFakeClient(i))
 			{
 				gI_voters++
 				if(gB_isDevmap)
@@ -2224,7 +2231,7 @@ Action cmd_afk(int client, int args)
 		gI_afkClient = client
 		for(int i = 1; i <= MaxClients; i++)
 		{
-			if(IsClientInGame(i) && !IsClientSourceTV(i) && !IsPlayerAlive(i) && client != i)
+			if(IsClientInGame(i) && !IsClientSourceTV(i) && !IsFakeClient(i) && !IsPlayerAlive(i) && client != i)
 			{
 				gB_afk[i] = false
 				gI_voters++
