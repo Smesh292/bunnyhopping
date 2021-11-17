@@ -134,12 +134,7 @@ Action timer_bot(Handle timer)
 			}
 		}
 		if(!replayRunning)
-		{
 			ServerCommand("bot_add")
-			char sQuery[512]
-			Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i", gI_steam3)
-			gD_database.Query(SQLGetName, sQuery)
-		}
 		int botCount
 		for(int i = 1; i <= MaxClients; i++)
 			if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
@@ -155,6 +150,9 @@ Action timer_bot(Handle timer)
 				}
 			}
 		}
+		char sQuery[512]
+		Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i LIMIT 1", gI_steam3)
+		gD_database.Query(SQLGetName, sQuery)
 	}
 }
 
