@@ -317,7 +317,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		gF_time = GetGameTime()
 		return Plugin_Changed
 	}
-	else if(IsFakeClient(client) && IsPlayerAlive(client) && GetGameTime() - gF_time > 3.0)
+	else if(IsFakeClient(client) && IsPlayerAlive(client) && GetGameTime() - gF_time > 3.0 && gB_loaded)
 	{
 		CS_RespawnPlayer(client)
 		gI_tick[0] = 0
