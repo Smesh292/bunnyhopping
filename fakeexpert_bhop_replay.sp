@@ -150,9 +150,12 @@ Action timer_bot(Handle timer)
 				}
 			}
 		}
-		char sQuery[512]
-		Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i LIMIT 1", gI_steam3)
-		gD_database.Query(SQLGetName, sQuery)
+		if(replayRunning)
+		{
+			char sQuery[512]
+			Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i LIMIT 1", gI_steam3)
+			gD_database.Query(SQLGetName, sQuery)
+		}
 	}
 }
 
