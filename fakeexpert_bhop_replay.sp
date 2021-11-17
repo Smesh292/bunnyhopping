@@ -108,37 +108,39 @@ public void OnMapStart()
 
 Action timer_bot(Handle timer)
 {
-	bool replayRunning
-	for(int i = 1; i <= MaxClients; i++)
+	if(gB_loaded)
 	{
-		if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
-		{
-			replayRunning = true
-			break
-		}
-	}
-	if(!replayRunning)
-		ServerCommand("bot_add")
-	int botCount
-	for(int i = 1; i <= MaxClients; i++)
-		if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
-			botCount++
-	if(botCount >= 2)
-	{
+		bool replayRunning
 		for(int i = 1; i <= MaxClients; i++)
 		{
 			if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
 			{
-				ServerCommand("bot_kick %N", i)
+				replayRunning = true
 				break
 			}
 		}
-	}
-	if(!replayRunning)
-	{
-		char sQuery[512]
-		Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i", gI_steam3)
-		gD_database.Query(SQLGetName, sQuery)
+		if(!replayRunning)
+		{
+			ServerCommand("bot_add")
+			char sQuery[512]
+			Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i", gI_steam3)
+			gD_database.Query(SQLGetName, sQuery)
+		}
+		int botCount
+		for(int i = 1; i <= MaxClients; i++)
+			if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
+				botCount++
+		if(botCount >= 2)
+		{
+			for(int i = 1; i <= MaxClients; i++)
+			{
+				if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
+				{
+					ServerCommand("bot_kick %N", i)
+					break
+				}
+			}
+		}
 	}
 }
 
