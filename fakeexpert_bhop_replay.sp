@@ -58,6 +58,7 @@ int gI_weapon[MAXPLAYERS + 1]
 bool gB_switchPrevent
 DynamicHook gH_UpdateStepSound
 bool gB_Linux
+bool gB_loaded
 
 public Plugin myinfo =
 {
@@ -102,6 +103,7 @@ public void OnMapStart()
 {
 	GetCurrentMap(gS_map, 192)
 	CreateTimer(3.0, timer_bot, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE)
+	gB_loaded = false
 }
 
 Action timer_bot(Handle timer)
@@ -234,6 +236,7 @@ void LoadRecord()
 		char sQuery[512]
 		Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i", gI_steam3)
 		gD_database.Query(SQLGetName, sQuery)
+		gB_loaded = true
 	}
 }
 
@@ -260,13 +263,11 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 		}
 		gA_frame[client].SetArray(gI_frameCount[client]++, frame, sizeof(eFrame))
 	}
-	if(IsFakeClient(client) && IsPlayerAlive(client))
-		return
 }
 
 public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3], float angles[3], int& weapon, int& subtype, int& cmdnum, int& tickcount, int& seed, int mouse[2])
 {
-	if(IsFakeClient(client) && IsPlayerAlive(client) && gI_tick[0] < gI_tick[1])
+	if(IsFakeClient(client) && IsPlayerAlive(client) && gI_tick[0] < gI_tick[1] && gB_loaded)
 	{
 		buttons = 0
 		vel[0] = 0.0 //Prevent bot shaking.
