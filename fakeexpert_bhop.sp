@@ -1558,61 +1558,100 @@ Action SDKStartTouch(int entity, int other)
 				int personalSecond = RoundToFloor(gF_Time[other]) % 60
 				if(gF_ServerRecord)
 				{
-					if(gF_ServerRecord > gF_Time[other])
+					if(gF_haveRecord[other])
 					{
-						float timeDiff = gF_ServerRecord - gF_Time[other]
-						int srHour = (RoundToFloor(timeDiff) / 3600) % 24
-						int srMinute = (RoundToFloor(timeDiff) / 60) % 60
-						int srSecond = RoundToFloor(timeDiff) % 60
-						PrintToChatAll("\x077CFC00New server record!")
-						PrintToChatAll("\x01%N finished map in \x077CFC00%02.i:%02.i:%02.i \x01(SR \x077CFC00-%02.i:%02.i:%02.i\x01)", other, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
-						FinishMSG(other, false, true, false, false, false, 0, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
-						Format(sQuery, 512, "UPDATE records SET time = %f, finishes = finishes + 1, cp1 = %f, cp2 = %f, cp3 = %f, cp4 = %f, cp5 = %f, cp6 = %f, cp7 = %f, cp8 = %f, cp9 = %f, cp10 = %f, date = %i WHERE playerid = %i AND map = '%s' ORDER BY time LIMIT 1", gF_Time[other], gF_TimeCP[1][other], gF_TimeCP[2][other], gF_TimeCP[3][other], gF_TimeCP[4][other], gF_TimeCP[5][other], gF_TimeCP[6][other], gF_TimeCP[7][other], gF_TimeCP[8][other], gF_TimeCP[9][other], gF_TimeCP[10][other], GetTime(), playerid, gS_map)
-						gD_mysql.Query(SQLUpdateRecord, sQuery)
-						gF_haveRecord[other] = gF_Time[other]
-						gB_isServerRecord = true
-						gF_ServerRecord = gF_Time[other]
-						CreateTimer(60.0, timer_sourcetv, _, TIMER_FLAG_NO_MAPCHANGE)
-						Call_StartForward(gH_record)
-						Call_PushCell(other)
-						Call_PushFloat(gF_Time[other])
-						Call_Finish()
-					}
-					else if((gF_ServerRecord < gF_Time[other] > gF_haveRecord[other]) && gF_haveRecord[other])
-					{
-						float timeDiff = gF_Time[other] - gF_ServerRecord
-						int srHour = (RoundToFloor(timeDiff) / 3600) % 24
-						int srMinute = (RoundToFloor(timeDiff) / 60) % 60
-						int srSecond = RoundToFloor(timeDiff) % 60
-						PrintToChatAll("\x01%N finished map in \x077CFC00%02.i:%02.i:%02.i \x01(SR \x07FF0000+%02.i:%02.i:%02.i\x01)", other, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
-						FinishMSG(other, false, false, false, false, false, 0, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
-						Format(sQuery, 512, "UPDATE records SET finishes = finishes + 1 WHERE playerid = %i AND map = '%s' LIMIT 1", playerid, gS_map)
-						gD_mysql.Query(SQLUpdateRecord, sQuery)
-					}
-					else if(gF_ServerRecord < gF_Time[other] < gF_haveRecord[other])
-					{
-						float timeDiff = gF_Time[other] - gF_ServerRecord
-						int srHour = (RoundToFloor(timeDiff) / 3600) % 24
-						int srMinute = (RoundToFloor(timeDiff) / 60) % 60
-						int srSecond = RoundToFloor(timeDiff) % 60
-						PrintToChatAll("\x01%N finished map in \x077CFC00%02.i:%02.i:%02.i \x01(SR \x07FF0000+%02.i:%02.i:%02.i\x01)", other, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
-						FinishMSG(other, false, false, false, false, false, 0, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
-						Format(sQuery, 512, "UPDATE records SET time = %f, finishes = finishes + 1, cp1 = %f, cp2 = %f, cp3 = %f, cp4 = %f, cp5 = %f, cp6 = %f, cp7 = %f, cp8 = %f, cp9 = %f, cp10 = %f, date = %i WHERE playerid = %i AND map = '%s' LIMIT 1", gF_Time[other], gF_TimeCP[1][other], gF_TimeCP[2][other], gF_TimeCP[3][other], gF_TimeCP[4][other], gF_TimeCP[5][other], gF_TimeCP[6][other], gF_TimeCP[7][other], gF_TimeCP[8][other], gF_TimeCP[9][other], gF_TimeCP[10][other], GetTime(), playerid, gS_map)
-						gD_mysql.Query(SQLUpdateRecord, sQuery)
-						if(gF_haveRecord[other] > gF_Time[other])
-							gF_haveRecord[other] = gF_Time[other]			
-					}
-					for(int i = 1; i <= gI_cpCount; i++)
-					{
-						if(gB_cp[i][other])
+						if(gF_ServerRecord > gF_Time[other])
 						{
-							int srCPHour = (RoundToFloor(gF_timeDiffCP[i][other]) / 3600) % 24
-							int srCPMinute = (RoundToFloor(gF_timeDiffCP[i][other]) / 60) % 60
-							int srCPSecond = RoundToFloor(gF_timeDiffCP[i][other]) % 60
-							if(gF_TimeCP[i][other] < gF_srCPTime[i])
-								PrintToChatAll("\x01%i. Checkpoint: \x077CFC00-%02.i:%02.i:%02.i", i, srCPHour, srCPMinute, srCPSecond)
-							else
-								PrintToChatAll("\x01%i. Checkpoint: \x07FF0000+%02.i:%02.i:%02.i", i, srCPHour, srCPMinute, srCPSecond)
+							float timeDiff = gF_ServerRecord - gF_Time[other]
+							int srHour = (RoundToFloor(timeDiff) / 3600) % 24
+							int srMinute = (RoundToFloor(timeDiff) / 60) % 60
+							int srSecond = RoundToFloor(timeDiff) % 60
+							PrintToChatAll("\x077CFC00New server record!")
+							PrintToChatAll("\x01%N finished map in \x077CFC00%02.i:%02.i:%02.i \x01(SR \x077CFC00-%02.i:%02.i:%02.i\x01)", other, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
+							FinishMSG(other, false, true, false, false, false, 0, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
+							Format(sQuery, 512, "UPDATE records SET time = %f, finishes = finishes + 1, cp1 = %f, cp2 = %f, cp3 = %f, cp4 = %f, cp5 = %f, cp6 = %f, cp7 = %f, cp8 = %f, cp9 = %f, cp10 = %f, date = %i WHERE playerid = %i AND map = '%s' ORDER BY time LIMIT 1", gF_Time[other], gF_TimeCP[1][other], gF_TimeCP[2][other], gF_TimeCP[3][other], gF_TimeCP[4][other], gF_TimeCP[5][other], gF_TimeCP[6][other], gF_TimeCP[7][other], gF_TimeCP[8][other], gF_TimeCP[9][other], gF_TimeCP[10][other], GetTime(), playerid, gS_map)
+							gD_mysql.Query(SQLUpdateRecord, sQuery)
+							gF_haveRecord[other] = gF_Time[other]
+							gB_isServerRecord = true
+							gF_ServerRecord = gF_Time[other]
+							CreateTimer(60.0, timer_sourcetv, _, TIMER_FLAG_NO_MAPCHANGE)
+							Call_StartForward(gH_record)
+							Call_PushCell(other)
+							Call_PushFloat(gF_Time[other])
+							Call_Finish()
+						}
+						else if((gF_ServerRecord < gF_Time[other] > gF_haveRecord[other]) && gF_haveRecord[other])
+						{
+							float timeDiff = gF_Time[other] - gF_ServerRecord
+							int srHour = (RoundToFloor(timeDiff) / 3600) % 24
+							int srMinute = (RoundToFloor(timeDiff) / 60) % 60
+							int srSecond = RoundToFloor(timeDiff) % 60
+							PrintToChatAll("\x01%N finished map in \x077CFC00%02.i:%02.i:%02.i \x01(SR \x07FF0000+%02.i:%02.i:%02.i\x01)", other, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
+							FinishMSG(other, false, false, false, false, false, 0, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
+							Format(sQuery, 512, "UPDATE records SET finishes = finishes + 1 WHERE playerid = %i AND map = '%s' LIMIT 1", playerid, gS_map)
+							gD_mysql.Query(SQLUpdateRecord, sQuery)
+						}
+						else if(gF_ServerRecord < gF_Time[other] < gF_haveRecord[other])
+						{
+							float timeDiff = gF_Time[other] - gF_ServerRecord
+							int srHour = (RoundToFloor(timeDiff) / 3600) % 24
+							int srMinute = (RoundToFloor(timeDiff) / 60) % 60
+							int srSecond = RoundToFloor(timeDiff) % 60
+							PrintToChatAll("\x01%N finished map in \x077CFC00%02.i:%02.i:%02.i \x01(SR \x07FF0000+%02.i:%02.i:%02.i\x01)", other, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
+							FinishMSG(other, false, false, false, false, false, 0, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
+							Format(sQuery, 512, "UPDATE records SET time = %f, finishes = finishes + 1, cp1 = %f, cp2 = %f, cp3 = %f, cp4 = %f, cp5 = %f, cp6 = %f, cp7 = %f, cp8 = %f, cp9 = %f, cp10 = %f, date = %i WHERE playerid = %i AND map = '%s' LIMIT 1", gF_Time[other], gF_TimeCP[1][other], gF_TimeCP[2][other], gF_TimeCP[3][other], gF_TimeCP[4][other], gF_TimeCP[5][other], gF_TimeCP[6][other], gF_TimeCP[7][other], gF_TimeCP[8][other], gF_TimeCP[9][other], gF_TimeCP[10][other], GetTime(), playerid, gS_map)
+							gD_mysql.Query(SQLUpdateRecord, sQuery)
+							if(gF_haveRecord[other] > gF_Time[other])
+								gF_haveRecord[other] = gF_Time[other]			
+						}
+						for(int i = 1; i <= gI_cpCount; i++)
+						{
+							if(gB_cp[i][other])
+							{
+								int srCPHour = (RoundToFloor(gF_timeDiffCP[i][other]) / 3600) % 24
+								int srCPMinute = (RoundToFloor(gF_timeDiffCP[i][other]) / 60) % 60
+								int srCPSecond = RoundToFloor(gF_timeDiffCP[i][other]) % 60
+								if(gF_TimeCP[i][other] < gF_srCPTime[i])
+									PrintToChatAll("\x01%i. Checkpoint: \x077CFC00-%02.i:%02.i:%02.i", i, srCPHour, srCPMinute, srCPSecond)
+								else
+									PrintToChatAll("\x01%i. Checkpoint: \x07FF0000+%02.i:%02.i:%02.i", i, srCPHour, srCPMinute, srCPSecond)
+							}
+						}
+					}
+					else
+					{
+						if(gF_ServerRecord > gF_Time[other])
+						{
+							float timeDiff = gF_ServerRecord - gF_Time[other]
+							int srHour = (RoundToFloor(timeDiff) / 3600) % 24
+							int srMinute = (RoundToFloor(timeDiff) / 60) % 60
+							int srSecond = RoundToFloor(timeDiff) % 60
+							PrintToChatAll("\x077CFC00New server record!")
+							PrintToChatAll("\x01%N finished map in \x077CFC00%02.i:%02.i:%02.i \x01(SR \x077CFC00-%02.i:%02.i:%02.i\x01)", other, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
+							FinishMSG(other, false, true, false, false, false, 0, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
+							Format(sQuery, 512, "INSERT INTO records (playerid, time, finishes, tries, cp1, cp2, cp3, cp4, cp5, cp6, cp7, cp8, cp9, cp10, map, date) VALUES (%i, %f, 1, 1, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, '%s', %i)", playerid, gF_Time[other], gF_TimeCP[1][other], gF_TimeCP[2][other], gF_TimeCP[3][other], gF_TimeCP[4][other], gF_TimeCP[5][other], gF_TimeCP[6][other], gF_TimeCP[7][other], gF_TimeCP[8][other], gF_TimeCP[9][other], gF_TimeCP[10][other], gS_map, GetTime())
+							gD_mysql.Query(SQLInsertRecord, sQuery)
+							gF_haveRecord[other] = gF_Time[other]
+							gB_isServerRecord = true
+							gF_ServerRecord = gF_Time[other]
+							CreateTimer(60.0, timer_sourcetv, _, TIMER_FLAG_NO_MAPCHANGE)
+							Call_StartForward(gH_record)
+							Call_PushCell(other)
+							Call_PushFloat(gF_Time[other])
+							Call_Finish()
+						}
+						else
+						{
+							float timeDiff = gF_Time[other] - gF_ServerRecord
+							int srHour = (RoundToFloor(timeDiff) / 3600) % 24
+							int srMinute = (RoundToFloor(timeDiff) / 60) % 60
+							int srSecond = RoundToFloor(timeDiff) % 60
+							PrintToChatAll("\x01%N finished map in \x077CFC00%02.i:%02.i:%02.i \x01(SR \x07FF0000+%02.i:%02.i:%02.i\x01)", other, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
+							FinishMSG(other, false, false, false, false, false, 0, personalHour, personalMinute, personalSecond, srHour, srMinute, srSecond)
+							Format(sQuery, 512, "INSERT INTO records (playerid, time, finishes, tries, cp1, cp2, cp3, cp4, cp5, cp6, cp7, cp8, cp9, cp10, map, date) VALUES (%i, %f, 1, 1, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, '%s', %i)", playerid, gF_Time[other], gF_TimeCP[1][other], gF_TimeCP[2][other], gF_TimeCP[3][other], gF_TimeCP[4][other], gF_TimeCP[5][other], gF_TimeCP[6][other], gF_TimeCP[7][other], gF_TimeCP[8][other], gF_TimeCP[9][other], gF_TimeCP[10][other], gS_map, GetTime())
+							gD_mysql.Query(SQLInsertRecord, sQuery)
+							if(!gF_haveRecord[other])
+								gF_haveRecord[other] = gF_Time[other]
 						}
 					}
 				}
