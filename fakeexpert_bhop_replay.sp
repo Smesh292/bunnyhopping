@@ -434,7 +434,7 @@ MRESReturn Hook_UpdateStepSound_Post(int pThis, DHookParam hParams)
 
 Action SDKTrigger(int entity, int other)
 {
-	if(IsFakeClient(other))
+	if(0 < other <= MaxClients && IsFakeClient(other) && IsPlayerAlive(other))
 		return Plugin_Handled
 	else
 		return Plugin_Continue
