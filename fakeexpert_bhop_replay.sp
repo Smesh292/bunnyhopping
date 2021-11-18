@@ -52,6 +52,7 @@ Database gD_database
 native bool Trikz_GetTimerState(int client)
 int gI_flagsLast[MAXPLAYERS + 1]
 Handle gH_DoAnimationEvent
+DynamicDetour gH_MaintainBotQuota
 float gF_time
 int gI_weapon[MAXPLAYERS + 1]
 bool gB_switchPrevent
@@ -74,6 +75,7 @@ public void OnPluginStart()
 	Database.Connect(SQLConnect, "fakeexpert_bhop")
 	HookEvent("round_start", OnRoundStart, EventHookMode_Post)
 	HookEvent("player_spawn", OnSpawn, EventHookMode_Post)
+	HookEvent("player_changename", OnChangeName, EventHookMode_Pre)
 	GameData gamedata = new GameData("fakeexpert_bhop")
 	gB_Linux = (gamedata.GetOffset("OS") == 2)
 	StartPrepSDKCall(gB_Linux ? SDKCall_Static : SDKCall_Player)
@@ -85,6 +87,9 @@ public void OnPluginStart()
 		PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_ByValue)
 	}
 	gH_DoAnimationEvent = EndPrepSDKCall()
+	gH_MaintainBotQuota = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_Address)
+	DHookSetFromConf(gH_MaintainBotQuota, gamedata, SDKConf_Signature, "BotManager::MaintainBotQuota")
+	gH_MaintainBotQuota.Enable(Hook_Pre, Detour_MaintainBotQuota)
 	int offset
 	if((offset = GameConfGetOffset(gamedata, "CBasePlayer::UpdateStepSound")) != -1)
 	{
@@ -100,6 +105,7 @@ public void OnPluginStart()
 public void OnPluginEnd()
 {
 	SetConVarFlags(FindConVar("bot_quota"), GetConVarFlags(FindConVar("bot_quota")) | FCVAR_NOTIFY)
+	ServerCommand("bot_kick")
 }
 
 public void OnMapStart()
@@ -119,13 +125,10 @@ Action timer_bot(Handle timer)
 		cvForce.SetInt(0)
 		cvForce = FindConVar("bot_quota")
 		cvForce.Flags = GetConVarFlags(FindConVar("bot_quota")) &~ FCVAR_NOTIFY
-		cvForce.SetInt(1)
 		cvForce = FindConVar("bot_flipout")
 		cvForce.SetInt(1)
 		cvForce = FindConVar("bot_zombie")
 		cvForce.SetInt(1)
-		cvForce = FindConVar("bot_quota_mode")
-		cvForce.SetString("normal")
 		bool replayRunning
 		for(int i = 1; i <= MaxClients; i++)
 		{
@@ -159,6 +162,10 @@ Action timer_bot(Handle timer)
 			gD_database.Query(SQLGetName, sQuery)
 		}
 	}
+	else
+		for(int i = 1; i <= MaxClients; i++)
+			if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
+				ServerCommand("bot_kick %N", i)
 }
 
 void SetupSave(int client, float time)
@@ -376,6 +383,14 @@ void OnSpawn(Event event, const char[] name, bool dontBroadcast)
 		}
 	}
 }
+Action OnChangeName(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"))
+	if(IsFakeClient(client))
+		return Plugin_Handled
+	else
+		return Plugin_Continue
+}
 
 void ApplyFlags(int &flags1, int flags2, int flag)
 {
@@ -411,6 +426,12 @@ Action SDKWeaponSwitch(int client, int weapon)
 				gI_weapon[client] = 4
 		}
 	}
+}
+
+// Stops bot_quota from doing anything.
+MRESReturn Detour_MaintainBotQuota(int pThis)
+{
+	return MRES_Supercede
 }
 
 // Remove flags from replay bots that cause CBasePlayer::UpdateStepSound to return without playing a footstep.
