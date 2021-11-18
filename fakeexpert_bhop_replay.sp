@@ -58,6 +58,7 @@ bool gB_switchPrevent
 DynamicHook gH_UpdateStepSound
 bool gB_Linux
 bool gB_loaded
+float gF_tickrate
 
 public Plugin myinfo =
 {
@@ -93,6 +94,7 @@ public void OnPluginStart()
 		gH_UpdateStepSound.AddParam(HookParamType_VectorPtr)
 	}
 	delete gamedata
+	gF_tickrate = 1.0 / GetTickInterval()
 }
 
 public void OnPluginEnd()
@@ -181,6 +183,7 @@ void SetupSave(int client, float time)
 
 void SaveRecord(int client, char[] path, float time)
 {
+	gA_frame[client].Resize(gI_frameCount[client])
 	File f = OpenFile(path, "wb")
 	f.WriteInt32(gI_frameCount[client])
 	gI_steam3 = GetSteamAccountID(client)
@@ -193,7 +196,7 @@ void SaveRecord(int client, char[] path, float time)
 	{
 		gA_frame[client].GetArray(i, aData, sizeof(eFrame))
 		for(int j = 0; j < sizeof(eFrame); j++)
-			aDataWrite[(sizeof(eFrame) * iFramesWritten) + j] = aData[j];
+			aDataWrite[(sizeof(eFrame) * iFramesWritten) + j] = aData[j]
 		if(++iFramesWritten == 100 || i == gI_frameCount[client] - 1)
 		{
 			f.Write(aDataWrite, sizeof(eFrame) * iFramesWritten, 4)
@@ -234,10 +237,8 @@ void LoadRecord()
 		delete gA_frameCache
 		gA_frameCache = new ArrayList(sizeof(eFrame), frameCount)
 		for(int i = 0; i < frameCount; i++)
-		{
-				if(f.Read(aData, sizeof(eFrame), 4) >= 0)
-					gA_frameCache.SetArray(i, aData, sizeof(eFrame))
-		}
+			if(f.Read(aData, sizeof(eFrame), 4) >= 0)
+				gA_frameCache.SetArray(i, aData, sizeof(eFrame))
 		delete f
 		gI_tick[0] = 0
 		char sQuery[512]
@@ -252,7 +253,7 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 	if(Trikz_GetTimerState(client))
 	{
 		if(gA_frame[client].Length <= gI_frameCount[client])
-			gA_frame[client].Resize(gI_frameCount[client] + (100 * 2))
+			gA_frame[client].Resize(gI_frameCount[client] + (RoundToCeil(gF_tickrate) * 2))
 		eFrame frame
 		GetClientAbsOrigin(client, frame.pos)
 		float ang[3]
@@ -276,17 +277,15 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 {
 	if(IsFakeClient(client) && IsPlayerAlive(client) && gI_tick[0] < gI_tick[1] && gB_loaded)
 	{
-		buttons = 0
 		vel[0] = 0.0 //Prevent bot shaking.
 		vel[1] = 0.0
-		//vel[2] = 0.0
 		eFrame frame
 		gA_frameCache.GetArray(gI_tick[0]++, frame, sizeof(eFrame))
 		float posPrev[3]
 		GetClientAbsOrigin(client, posPrev)
 		float velPos[3]
 		MakeVectorFromPoints(posPrev, frame.pos, velPos)
-		ScaleVector(velPos, 100.0)
+		ScaleVector(velPos, gF_tickrate)
 		buttons = frame.buttons
 		float ang[3]
 		ang[0] = frame.ang[0]
@@ -330,7 +329,6 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		gI_tick[0] = 0
 		vel[0] = 0.0 //Prevent bot shaking.
 		vel[1] = 0.0
-		vel[2] = 0.0
 		return Plugin_Changed
 	}
 	return Plugin_Continue
@@ -382,13 +380,9 @@ void OnSpawn(Event event, const char[] name, bool dontBroadcast)
 void ApplyFlags(int &flags1, int flags2, int flag)
 {
 	if((flags2 & flag) != 0)
-	{
 		flags1 |= flag
-	}
 	else
-	{
 		flags1 &= ~flag
-	}
 }
 
 public void OnEntityCreated(int entity, const char[] classname)
@@ -402,9 +396,7 @@ Action SDKWeaponSwitch(int client, int weapon)
 	if(Trikz_GetTimerState(client))
 	{
 		if(gB_switchPrevent)
-		{
 			gB_switchPrevent = false
-		}
 		else
 		{
 			char sClassname[32]
