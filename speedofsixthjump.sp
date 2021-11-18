@@ -106,6 +106,16 @@ Action OnJump(Event event, const char[] name, bool dontBroadcast)
 			GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel)
 			float velXY = SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0))
 			PrintToChat(client, "Speed of sixth jump: %.0f", velXY)
+			for(int i = 1; i <= MaxClients; i++)
+			{
+				if(IsClientInGame(i) && IsClientObserver(i))
+				{
+					int observerTarget = GetEntPropEnt(i, Prop_Data, "m_hObserverTarget")
+					int observerMode = GetEntProp(i, Prop_Data, "m_iObserverMode")
+					if(observerMode < 7 && observerTarget == client && gB_ssj[i])
+						PrintToChat(i, "Speed of sixth jump: %.0f", velXY)
+				}
+			}
 		}
 	}
 }
