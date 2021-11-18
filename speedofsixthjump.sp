@@ -60,12 +60,24 @@ public void OnClientCookiesCached(int client)
 
 Action cmd_ssj(int client, int args)
 {
+	SSJ(client)
+	return Plugin_Handled
+}
+
+public Action OnClientSayCommand(int client, const char[] command, const char[] sArgs)
+{
+	if(!IsChatTrigger())
+		if(StrEqual(sArgs, "ssj"))
+			SSJ(client)
+}
+
+void SSJ(int client)
+{
 	gB_ssj[client] = !gB_ssj[client]
 	char sValue[16]
 	IntToString(gB_ssj[client], sValue, 16)
 	SetClientCookie(client, gH_cookie, sValue)
 	PrintToChat(client, gB_ssj[client] ? "Speed of sixth jump is on." : "Speed of sixth jump is off.")
-	return Plugin_Handled
 }
 
 public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3], float angles[3], int& weapon, int& subtype, int& cmdnum, int& tickcount, int& seed, int mouse[2])
