@@ -113,7 +113,7 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	gCV_steamid = CreateConVar("steamid", "", "Set steamid for control the plugin ex. 120192594. Use status to check your uniqueid, without 'U:1:'.")
-	gCV_topURL = CreateConVar("topurl", "", "Set url for top for ex (http://www.fakeexpert.rf.gd/?start=0&map=). To open page, type in game chat !top")
+	gCV_topURL = CreateConVar("topurl", "", "Set url for top for ex (http://www.fakeexpert-bhop.rf.gd/?start=0&map=). To open page, type in game chat !top")
 	AutoExecConfig(true) //https://sm.alliedmods.net/new-api/sourcemod/AutoExecConfig
 	RegConsoleCmd("sm_bh", cmd_bhop)
 	RegConsoleCmd("sm_bhop", cmd_bhop)
