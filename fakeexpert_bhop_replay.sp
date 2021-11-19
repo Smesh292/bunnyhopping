@@ -329,6 +329,11 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 				}
 			}
 		}
+		if(gI_tick[0] == gI_tick[1])
+		{
+			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, NULL_VECTOR)
+			return Plugin_Changed
+		}
 		TeleportEntity(client, NULL_VECTOR, ang, velPos)
 		gF_time = GetGameTime()
 		return Plugin_Changed
