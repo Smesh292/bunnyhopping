@@ -36,7 +36,7 @@
 char gS_map[192]
 ArrayList gA_frame[MAXPLAYERS + 1]
 ArrayList gA_frameCache
-int gI_frameCount[MAXPLAYERS + 1]
+int gI_tickcount[MAXPLAYERS + 1]
 enum struct eFrame
 {
 	float pos[3]
@@ -60,6 +60,10 @@ DynamicHook gH_UpdateStepSound
 bool gB_Linux
 bool gB_loaded
 float gF_tickrate
+char gS_weapon[][] = {"knife", "glock", "usp", "flashbang", "hegrenade", "smokegrenade", "p228", "deagle", "elite", "fiveseven", 
+						"m3", "xm1014", "galil", "ak47", "scout", "sg552", 
+						"awp", "g3sg1", "famas", "m4a1", "aug", "sg550", 
+						"mac10", "tmp", "mp5navy", "ump45", "p90", "m249"}
 
 public Plugin myinfo =
 {
@@ -190,21 +194,20 @@ void SetupSave(int client, float time)
 
 void SaveRecord(int client, char[] path, float time)
 {
-	gA_frame[client].Resize(gI_frameCount[client])
+	gA_frame[client].Resize(gI_tickcount[client])
 	File f = OpenFile(path, "wb")
-	f.WriteInt32(gI_frameCount[client])
-	gI_steam3 = GetSteamAccountID(client)
-	f.WriteInt32(gI_steam3)
+	f.WriteInt32(gI_tickcount[client])
+	f.WriteInt32(GetSteamAccountID(client))
 	f.WriteInt32(view_as<int>(time))
 	any aData[sizeof(eFrame)]
 	any aDataWrite[sizeof(eFrame) * 100]
 	int iFramesWritten
-	for(int i = 0; i < gI_frameCount[client]; i++)
+	for(int i = 0; i < gI_tickcount[client]; i++)
 	{
 		gA_frame[client].GetArray(i, aData, sizeof(eFrame))
 		for(int j = 0; j < sizeof(eFrame); j++)
 			aDataWrite[(sizeof(eFrame) * iFramesWritten) + j] = aData[j]
-		if(++iFramesWritten == 100 || i == gI_frameCount[client] - 1)
+		if(++iFramesWritten == 100 || i == gI_tickcount[client] - 1)
 		{
 			f.Write(aDataWrite, sizeof(eFrame) * iFramesWritten, 4)
 			iFramesWritten = 0
@@ -234,16 +237,16 @@ void LoadRecord()
 	if(FileExists(sFile))
 	{
 		File f = OpenFile(sFile, "rb")
-		int frameCount
+		int framecount
 		int time
-		f.ReadInt32(frameCount)
+		f.ReadInt32(framecount)
 		f.ReadInt32(gI_steam3)
 		f.ReadInt32(time)
-		gI_tick[1] = frameCount
+		gI_tick[1] = framecount
 		any aData[sizeof(eFrame)]
 		delete gA_frameCache
-		gA_frameCache = new ArrayList(sizeof(eFrame), frameCount)
-		for(int i = 0; i < frameCount; i++)
+		gA_frameCache = new ArrayList(sizeof(eFrame), framecount)
+		for(int i = 0; i < framecount; i++)
 			if(f.Read(aData, sizeof(eFrame), 4) >= 0)
 				gA_frameCache.SetArray(i, aData, sizeof(eFrame))
 		delete f
@@ -259,8 +262,8 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 {
 	if(Trikz_GetTimerState(client))
 	{
-		if(gA_frame[client].Length <= gI_frameCount[client])
-			gA_frame[client].Resize(gI_frameCount[client] + (RoundToCeil(gF_tickrate) * 2))
+		if(gA_frame[client].Length <= gI_tickcount[client])
+			gA_frame[client].Resize(gI_tickcount[client] + (RoundToCeil(gF_tickrate) * 2))
 		eFrame frame
 		GetClientAbsOrigin(client, frame.pos)
 		float ang[3]
@@ -276,7 +279,7 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 			frame.weapon = gI_weapon[client]
 			gI_weapon[client] = 0
 		}
-		gA_frame[client].SetArray(gI_frameCount[client]++, frame, sizeof(eFrame))
+		gA_frame[client].SetArray(gI_tickcount[client]++, frame, sizeof(eFrame))
 	}
 }
 
@@ -289,7 +292,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		eFrame frame
 		gA_frameCache.GetArray(gI_tick[0]++, frame, sizeof(eFrame))
 		float posPrev[3]
-		GetClientAbsOrigin(client, posPrev)
+		GetEntPropVector(client, Prop_Send, "m_vecOrigin", posPrev)
 		float velPos[3]
 		MakeVectorFromPoints(posPrev, frame.pos, velPos)
 		ScaleVector(velPos, gF_tickrate)
@@ -315,16 +318,16 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 			movetype = frame.movetype
 		gI_flagsLast[client] = frame.flags
 		SetEntityMoveType(client, movetype)
-		switch(frame.weapon)
+		if(frame.weapon)
 		{
-			case 1:
-				FakeClientCommand(client, "use weapon_knife")
-			case 2:
-				FakeClientCommand(client, "use weapon_glock")
-			case 3:
-				FakeClientCommand(client, "use weapon_usp")
-			case 4:
-				FakeClientCommand(client, "use weapon_flashbang")
+			for(int i = 0; i < sizeof(gS_weapon); i++)
+			{
+				if(frame.weapon == i + 1)
+				{
+					FakeClientCommand(client, "use weapon_%s", gS_weapon[i])
+					break
+				}
+			}
 		}
 		TeleportEntity(client, NULL_VECTOR, ang, velPos)
 		gF_time = GetGameTime()
@@ -357,7 +360,7 @@ public void Bhop_Start(int client)
 {
 	delete gA_frame[client]
 	gA_frame[client] = new ArrayList((sizeof(eFrame)))
-	gI_frameCount[client] = 0
+	gI_tickcount[client] = 0
 }
 
 public void Bhop_Record(int client, float time)
@@ -415,14 +418,16 @@ Action SDKWeaponSwitch(int client, int weapon)
 		{
 			char sClassname[32]
 			GetEntityClassname(weapon, sClassname, 32)
-			if(StrEqual(sClassname, "weapon_knife"))
-				gI_weapon[client] = 1
-			else if(StrEqual(sClassname, "weapon_glock"))
-				gI_weapon[client] = 2
-			else if(StrEqual(sClassname, "weapon_usp"))
-				gI_weapon[client] = 3
-			else if(StrEqual(sClassname, "weapon_flashbang"))
-				gI_weapon[client] = 4
+			char sWeapon[32]
+			for(int i = 0; i < sizeof(gS_weapon); i++)
+			{
+				Format(sWeapon, 32, "weapon_%s", gS_weapon[i])
+				if(StrEqual(sClassname, sWeapon))
+				{
+					gI_weapon[client] = i + 1
+					break
+				}
+			}
 		}
 	}
 }
