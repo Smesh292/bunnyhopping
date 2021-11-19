@@ -329,7 +329,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		else if(1 < gI_tick[0] < gI_tick[1])
 			TeleportEntity(client, NULL_VECTOR, ang, velPos)
 		else if(gI_tick[0] == gI_tick[1])
-			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, NULL_VECTOR)
+			TeleportEntity(client, frame.pos, ang, NULL_VECTOR)
 		gF_time = GetGameTime()
 	}
 	else if(IsFakeClient(client) && IsPlayerAlive(client) && GetGameTime() - gF_time > 3.0 && gB_loaded)
