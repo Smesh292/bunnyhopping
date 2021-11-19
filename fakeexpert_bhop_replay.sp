@@ -35,8 +35,8 @@
 
 char gS_map[192]
 ArrayList gA_frame[MAXPLAYERS + 1]
-ArrayList gA_frameCache
-int gI_frameCount[MAXPLAYERS + 1]
+ArrayList gA_frameCache[MAXPLAYERS + 1]
+int gI_tickcount[MAXPLAYERS + 1]
 enum struct eFrame
 {
 	float pos[3]
@@ -46,37 +46,41 @@ enum struct eFrame
 	MoveType movetype
 	int weapon
 }
-int gI_tick[2]
-int gI_steam3
+int gI_tick[MAXPLAYERS + 1][2]
+int gI_steam3[2]
 Database gD_database
-native bool Trikz_GetTimerState(int client)
+native bool Trikz_GetTimerStateTrikz(int client)
 int gI_flagsLast[MAXPLAYERS + 1]
 Handle gH_DoAnimationEvent
 DynamicDetour gH_MaintainBotQuota
-float gF_time
+int gI_timeToRestart[MAXPLAYERS + 1]
 int gI_weapon[MAXPLAYERS + 1]
-bool gB_switchPrevent
+bool gB_switchPrevent[MAXPLAYERS + 1]
 DynamicHook gH_UpdateStepSound
 bool gB_Linux
-bool gB_loaded
+native int Trikz_GetClientPartner(int client)
+native int Trikz_SetTrikzPartner(int client, int partner)
+int gI_bot[2]
+bool gB_loaded[2]
 float gF_tickrate
+int gI_replayTickCount
+float gF_frameAsync[MAXPLAYERS + 1][9]
 
 public Plugin myinfo =
 {
 	name = "Replay",
 	author = "Smesh(Nick Yurevich)",
-	description = "Replay module for fakeexpert_bhop.",
+	description = "Replay module for fakeexpert.",
 	version = "0.1",
 	url = "http://www.sourcemod.net/"
 }
 
 public void OnPluginStart()
 {
-	Database.Connect(SQLConnect, "fakeexpert_bhop")
-	HookEvent("round_start", OnRoundStart, EventHookMode_Post)
+	Database.Connect(SQLConnect, "fakeexpert")
 	HookEvent("player_spawn", OnSpawn, EventHookMode_Post)
 	HookEvent("player_changename", OnChangeName, EventHookMode_Pre)
-	GameData gamedata = new GameData("fakeexpert_bhop")
+	GameData gamedata = new GameData("fakeexpert")
 	gB_Linux = (gamedata.GetOffset("OS") == 2)
 	StartPrepSDKCall(gB_Linux ? SDKCall_Static : SDKCall_Player)
 	if(PrepSDKCall_SetFromConf(gamedata, SDKConf_Signature, "Player::DoAnimationEvent"))
@@ -112,13 +116,19 @@ public void OnMapStart()
 {
 	GetCurrentMap(gS_map, 192)
 	CreateTimer(3.0, timer_bot, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE)
-	gB_loaded = false
+	for(int i = 0; i <= 1; i++)
+	{
+		gI_bot[i] = 0
+		gB_loaded[i] = false
+	}
 }
 
 Action timer_bot(Handle timer)
 {
-	if(gB_loaded)
+	//PrintToServer("yes")
+	//if(gB_loaded[0] && gB_loaded[1])
 	{
+		//PrintToServer("yes")
 		ConVar cvForce = FindConVar("bot_stop")
 		cvForce.SetInt(1)
 		cvForce = FindConVar("bot_join_after_player")
@@ -129,22 +139,17 @@ Action timer_bot(Handle timer)
 		cvForce.SetInt(1)
 		cvForce = FindConVar("bot_zombie")
 		cvForce.SetInt(1)
-		bool replayRunning
+		int replayRunning
 		for(int i = 1; i <= MaxClients; i++)
-		{
 			if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
-			{
-				replayRunning = true
-				break
-			}
-		}
-		if(!replayRunning)
+				replayRunning++
+		if(replayRunning < 2)
 			ServerCommand("bot_add")
 		int botCount
 		for(int i = 1; i <= MaxClients; i++)
 			if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
 				botCount++
-		if(botCount >= 2)
+		if(botCount > 2)
 		{
 			for(int i = 1; i <= MaxClients; i++)
 			{
@@ -158,60 +163,92 @@ Action timer_bot(Handle timer)
 		if(replayRunning)
 		{
 			char sQuery[512]
-			Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i LIMIT 1", gI_steam3)
-			gD_database.Query(SQLGetName, sQuery)
+			Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i LIMIT 1", gI_steam3[0])
+			gD_database.Query(SQLGetName, sQuery, 0)
+			Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i LIMIT 1", gI_steam3[1])
+			gD_database.Query(SQLGetName, sQuery, 1)
+		}
+		for(int i = 1; i <= MaxClients; i++)
+		{
+			if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
+			{
+				if(!gI_bot[0])
+				{
+					gI_bot[0] = i
+					continue
+				}
+				else if(!gI_bot[1])
+				{
+					if(gI_bot[0] != i)
+					{
+						gI_bot[1] = i
+						break
+					}
+				}
+				else if(gI_bot[1])
+				{
+					if(!Trikz_GetClientPartner(gI_bot[1]))
+					{
+						Trikz_SetTrikzPartner(gI_bot[0], gI_bot[1])
+						Trikz_SetTrikzPartner(gI_bot[1], gI_bot[0])
+						LoadRecord()
+					}
+				}
+			}
 		}
 	}
-	else
+	/*else if(!gB_loaded[0] && !gB_loaded[1])
 		for(int i = 1; i <= MaxClients; i++)
 			if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
-				ServerCommand("bot_kick %N", i)
+				ServerCommand("bot_kick %N", i)*/
 }
 
 void SetupSave(int client, float time)
 {
 	char sDir[PLATFORM_MAX_PATH]
-	BuildPath(Path_SM, sDir, PLATFORM_MAX_PATH, "data/fakeexpert_bhop")
+	BuildPath(Path_SM, sDir, PLATFORM_MAX_PATH, "data/fakeexpert")
 	if(!DirExists(sDir))
 		CreateDirectory(sDir, 511)
 	char sDirBackup[PLATFORM_MAX_PATH]
-	BuildPath(Path_SM, sDirBackup, PLATFORM_MAX_PATH, "data/fakeexpert_bhop/backup")
+	BuildPath(Path_SM, sDirBackup, PLATFORM_MAX_PATH, "data/fakeexpert/backup")
 	if(!DirExists(sDirBackup))
 		CreateDirectory(sDirBackup, 511)
 	char sRecord[PLATFORM_MAX_PATH]
-	BuildPath(Path_SM, sRecord, PLATFORM_MAX_PATH, "data/fakeexpert_bhop/%s.replay", gS_map)
+	BuildPath(Path_SM, sRecord, PLATFORM_MAX_PATH, "data/fakeexpert/%s.replay", gS_map)
 	SaveRecord(client, sRecord, time)
+	BuildPath(Path_SM, sRecord, PLATFORM_MAX_PATH, "data/fakeexpert/%s_partner.replay", gS_map)
+	SaveRecord(Trikz_GetClientPartner(client), sRecord, time)
 	char sRecordBackup[PLATFORM_MAX_PATH]
 	char sFormatTime[32]
 	FormatTime(sFormatTime, 32, "%Y%b%d_%H_%M_%S", GetTime())
-	BuildPath(Path_SM, sRecordBackup, PLATFORM_MAX_PATH, "data/fakeexpert_bhop/backup/%s_%s.replay", gS_map, sFormatTime)
+	BuildPath(Path_SM, sRecordBackup, PLATFORM_MAX_PATH, "data/fakeexpert/backup/%s_%s.replay", gS_map, sFormatTime)
 	SaveRecord(client, sRecordBackup, time)
+	BuildPath(Path_SM, sRecordBackup, PLATFORM_MAX_PATH, "data/fakeexpert/backup/%s_%s_partner.replay", gS_map, sFormatTime)
+	SaveRecord(Trikz_GetClientPartner(client), sRecordBackup, time)
 }
 
 void SaveRecord(int client, char[] path, float time)
 {
-	gA_frame[client].Resize(gI_frameCount[client])
+	gA_frame[client].Resize(gI_tick[client][1])
 	File f = OpenFile(path, "wb")
-	f.WriteInt32(gI_frameCount[client])
-	gI_steam3 = GetSteamAccountID(client)
-	f.WriteInt32(gI_steam3)
+	f.WriteInt32(gI_tick[client][1])
+	f.WriteInt32(GetSteamAccountID(client))
 	f.WriteInt32(view_as<int>(time))
 	any aData[sizeof(eFrame)]
 	any aDataWrite[sizeof(eFrame) * 100]
 	int iFramesWritten
-	for(int i = 0; i < gI_frameCount[client]; i++)
+	for(int i = 0; i < gI_tick[client][1]; i++)
 	{
 		gA_frame[client].GetArray(i, aData, sizeof(eFrame))
 		for(int j = 0; j < sizeof(eFrame); j++)
 			aDataWrite[(sizeof(eFrame) * iFramesWritten) + j] = aData[j]
-		if(++iFramesWritten == 100 || i == gI_frameCount[client] - 1)
+		if(++iFramesWritten == 100 || i == gI_tick[client][1] - 1)
 		{
 			f.Write(aDataWrite, sizeof(eFrame) * iFramesWritten, 4)
 			iFramesWritten = 0
 		}
 	}
 	delete f
-	LoadRecord()
 }
 
 void SQLGetName(Database db, DBResultSet results, const char[] error, any data)
@@ -223,44 +260,76 @@ void SQLGetName(Database db, DBResultSet results, const char[] error, any data)
 		Format(sName, MAX_NAME_LENGTH, "RECORD %s", sName)
 		for(int i = 1; i <= MaxClients; i++)
 			if(IsClientInGame(i) && IsFakeClient(i) && IsPlayerAlive(i))
-				SetClientName(i, sName)
+				if(gI_bot[data] == i && gI_steam3[data])
+					SetClientName(i, sName)
 	}
 }
 
 void LoadRecord()
 {
 	char sFile[PLATFORM_MAX_PATH]
-	BuildPath(Path_SM, sFile, PLATFORM_MAX_PATH, "data/fakeexpert_bhop/%s.replay", gS_map)
+	BuildPath(Path_SM, sFile, PLATFORM_MAX_PATH, "data/fakeexpert/%s.replay", gS_map)
 	if(FileExists(sFile))
 	{
 		File f = OpenFile(sFile, "rb")
-		int frameCount
+		int tickcount
 		int time
-		f.ReadInt32(frameCount)
-		f.ReadInt32(gI_steam3)
+		f.ReadInt32(tickcount)
+		f.ReadInt32(gI_steam3[0])
 		f.ReadInt32(time)
-		gI_tick[1] = frameCount
+		gI_replayTickCount = tickcount
+		PrintToServer("%i", tickcount)
 		any aData[sizeof(eFrame)]
-		delete gA_frameCache
-		gA_frameCache = new ArrayList(sizeof(eFrame), frameCount)
-		for(int i = 0; i < frameCount; i++)
+		delete gA_frameCache[gI_bot[0]]
+		gA_frameCache[gI_bot[0]] = new ArrayList(sizeof(eFrame), tickcount)
+		for(int i = 0; i < tickcount; i++)
 			if(f.Read(aData, sizeof(eFrame), 4) >= 0)
-				gA_frameCache.SetArray(i, aData, sizeof(eFrame))
+				gA_frameCache[gI_bot[0]].SetArray(i, aData, sizeof(eFrame))
 		delete f
-		gI_tick[0] = 0
 		char sQuery[512]
-		Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i", gI_steam3)
-		gD_database.Query(SQLGetName, sQuery)
-		gB_loaded = true
+		Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i", gI_steam3[0])
+		gD_database.Query(SQLGetName, sQuery, 0)
+		gI_timeToRestart[gI_bot[0]] = GetGameTickCount()
+		gB_loaded[0] = true
+		for(int i = 1; i <= MaxClients; i++)
+			if(IsClientInGame(i))
+				gI_tick[i][0] = 0
+	}
+	BuildPath(Path_SM, sFile, PLATFORM_MAX_PATH, "data/fakeexpert/%s_partner.replay", gS_map)
+	if(FileExists(sFile))
+	{
+		File f = OpenFile(sFile, "rb")
+		int tickcount
+		int time
+		f.ReadInt32(tickcount)
+		f.ReadInt32(gI_steam3[1])
+		f.ReadInt32(time)
+		gI_replayTickCount = tickcount
+		PrintToServer("%i", tickcount)
+		any aData[sizeof(eFrame)]
+		delete gA_frameCache[gI_bot[1]]
+		gA_frameCache[gI_bot[1]] = new ArrayList(sizeof(eFrame), tickcount)
+		for(int i = 0; i < tickcount; i++)
+			if(f.Read(aData, sizeof(eFrame), 4) >= 0)
+				gA_frameCache[gI_bot[1]].SetArray(i, aData, sizeof(eFrame))
+		delete f
+		char sQuery[512]
+		Format(sQuery, 512, "SELECT username FROM users WHERE steamid = %i", gI_steam3[1])
+		gD_database.Query(SQLGetName, sQuery, 1)
+		gI_timeToRestart[gI_bot[1]] = GetGameTickCount()
+		gB_loaded[1] = true
+		for(int i = 1; i <= MaxClients; i++)
+			if(IsClientInGame(i))
+				gI_tick[i][0] = 0
 	}
 }
 
 public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float vel[3], const float angles[3], int weapon, int subtype, int cmdnum, int tickcount, int seed, const int mouse[2])
 {
-	if(Trikz_GetTimerState(client))
+	if(Trikz_GetTimerStateTrikz(client))
 	{
-		if(gA_frame[client].Length <= gI_frameCount[client])
-			gA_frame[client].Resize(gI_frameCount[client] + (RoundToCeil(gF_tickrate) * 2))
+		if(gA_frame[client].Length <= gI_tick[client][1])
+			gA_frame[client].Resize(gI_tick[client][1] + (RoundToCeil(gF_tickrate) * 2))
 		eFrame frame
 		GetClientAbsOrigin(client, frame.pos)
 		float ang[3]
@@ -272,24 +341,66 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 		frame.movetype = GetEntityMoveType(client)
 		if(gI_weapon[client])
 		{
-			gB_switchPrevent = true
+			gB_switchPrevent[client] = true
 			frame.weapon = gI_weapon[client]
 			gI_weapon[client] = 0
 		}
-		gA_frame[client].SetArray(gI_frameCount[client]++, frame, sizeof(eFrame))
+		gA_frame[client].SetArray(gI_tick[client][1]++, frame, sizeof(eFrame))
+		/*int size = gA_frame[client].Length
+		int diff = 1
+		if(gI_tick[Trikz_GetClientPartner(client)][1] && gI_tick[Trikz_GetClientPartner(client)][1] > size + 1)
+			diff = gI_tick[Trikz_GetClientPartner(client)][1] - size + 1
+		gA_frame[client].Resize(diff + size)
+		if(diff > 1)
+		{
+			int i
+			while(diff + -1 > i)
+			{
+				gA_frame[client].Set(size + i, gF_frameAsync[client][0], 0)
+				gA_frame[client].Set(size + i, gF_frameAsync[client][1], 1)
+				gA_frame[client].Set(size + i, gF_frameAsync[client][2], 2)
+				gA_frame[client].Set(size + i, gF_frameAsync[client][3], 3)
+				gA_frame[client].Set(size + i, gF_frameAsync[client][4], 4)
+				gA_frame[client].Set(size + i, gF_frameAsync[client][5], 5)
+				gA_frame[client].Set(size + i, gF_frameAsync[client][6], 6)
+				gA_frame[client].Set(size + i, gF_frameAsync[client][7], 7)
+				gA_frame[client].Set(size + i, gF_frameAsync[client][8], 8)
+				i++
+			}
+			size = diff + -1 + size
+		}
+		gA_frame[client].Set(size, frame.pos[0], 0)
+		gA_frame[client].Set(size, frame.pos[1], 1)
+		gA_frame[client].Set(size, frame.pos[2], 2)
+		gA_frame[client].Set(size, ang[0], 3)
+		gA_frame[client].Set(size, ang[1], 4)
+		gA_frame[client].Set(size, buttons, 5)
+		gA_frame[client].Set(size, GetEntityFlags(client), 6)
+		gA_frame[client].Set(size, GetEntityMoveType(client), 7)
+		gA_frame[client].Set(size, frame.weapon, 8)
+		gI_tick[client][1] = size
+		gF_frameAsync[client][0] = frame.pos[0]
+		gF_frameAsync[client][1] = frame.pos[1]
+		gF_frameAsync[client][2] = frame.pos[2]
+		gF_frameAsync[client][3] = ang[0]
+		gF_frameAsync[client][4] = ang[1]
+		gF_frameAsync[client][5] = view_as<float>(buttons)
+		gF_frameAsync[client][6] = view_as<float>(GetEntityFlags(client))
+		gF_frameAsync[client][7] = view_as<float>(GetEntityMoveType(client))
+		gF_frameAsync[client][8] = view_as<float>(frame.weapon)*/
 	}
 }
 
 public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3], float angles[3], int& weapon, int& subtype, int& cmdnum, int& tickcount, int& seed, int mouse[2])
 {
-	if(IsFakeClient(client) && IsPlayerAlive(client) && gI_tick[0] < gI_tick[1] && gB_loaded)
+	if(IsFakeClient(client) && IsPlayerAlive(client) && gI_tick[client][0] < gI_replayTickCount && gB_loaded[0] && gB_loaded[1])
 	{
 		vel[0] = 0.0 //Prevent bot shaking.
 		vel[1] = 0.0
 		eFrame frame
-		gA_frameCache.GetArray(gI_tick[0]++, frame, sizeof(eFrame))
+		gA_frameCache[client].GetArray(gI_tick[client][0]++, frame, sizeof(eFrame))
 		float posPrev[3]
-		GetClientAbsOrigin(client, posPrev)
+		GetEntPropVector(client, Prop_Send, "m_vecOrigin", posPrev)
 		float velPos[3]
 		MakeVectorFromPoints(posPrev, frame.pos, velPos)
 		ScaleVector(velPos, gF_tickrate)
@@ -297,7 +408,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		float ang[3]
 		ang[0] = frame.ang[0]
 		ang[1] = frame.ang[1]
-		if(gI_tick[0] == 1)
+		if(gI_tick[client][0] == 1)
 		{
 			TeleportEntity(client, frame.pos, ang, view_as<float>({0.0, 0.0, 0.0}))
 			return Plugin_Changed
@@ -326,14 +437,14 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 			case 4:
 				FakeClientCommand(client, "use weapon_flashbang")
 		}
+		gI_timeToRestart[client] = GetGameTickCount()
 		TeleportEntity(client, NULL_VECTOR, ang, velPos)
-		gF_time = GetGameTime()
 		return Plugin_Changed
 	}
-	else if(IsFakeClient(client) && IsPlayerAlive(client) && GetGameTime() - gF_time > 3.0 && gB_loaded)
+	else if(IsFakeClient(client) && IsPlayerAlive(client) && GetGameTickCount() - gI_timeToRestart[client] == 300)
 	{
 		CS_RespawnPlayer(client)
-		gI_tick[0] = 0
+		gI_tick[client][0] = 0
 		vel[0] = 0.0 //Prevent bot shaking.
 		vel[1] = 0.0
 		return Plugin_Changed
@@ -350,24 +461,18 @@ void SQLConnect(Database db, const char[] error, any data)
 	}
 	PrintToServer("Successfuly connected to database.") //https://hlmod.ru/threads/sourcepawn-urok-13-rabota-s-bazami-dannyx-mysql-sqlite.40011/
 	gD_database = db
-	LoadRecord()
 }
 
-public void Bhop_Start(int client)
+public void Trikz_Start(int client)
 {
 	delete gA_frame[client]
 	gA_frame[client] = new ArrayList((sizeof(eFrame)))
-	gI_frameCount[client] = 0
+	gI_tick[client][1] = 0
 }
 
-public void Bhop_Record(int client, float time)
+public void Trikz_Record(int client, float time)
 {
 	SetupSave(client, time)
-}
-
-void OnRoundStart(Event event, const char[] name, bool dontBroadcast)
-{
-	LoadRecord()
 }
 
 void OnSpawn(Event event, const char[] name, bool dontBroadcast)
@@ -375,6 +480,7 @@ void OnSpawn(Event event, const char[] name, bool dontBroadcast)
 	int client = GetClientOfUserId(event.GetInt("userid"))
 	if(GetClientTeam(client) == CS_TEAM_T || GetClientTeam(client) == CS_TEAM_CT)
 	{
+		//GivePlayerItem(client, "weapon_flashbang")
 		SDKHook(client, SDKHook_WeaponSwitch, SDKWeaponSwitch)
 		if(IsFakeClient(client))
 		{
@@ -399,18 +505,12 @@ void ApplyFlags(int &flags1, int flags2, int flag)
 		flags1 &= ~flag
 }
 
-public void OnEntityCreated(int entity, const char[] classname)
-{
-	if(StrContains(classname, "trigger") != -1)
-		SDKHook(entity, SDKHook_Touch, SDKTrigger)
-}
-
 Action SDKWeaponSwitch(int client, int weapon)
 {
-	if(Trikz_GetTimerState(client))
+	if(Trikz_GetTimerStateTrikz(client))
 	{
-		if(gB_switchPrevent)
-			gB_switchPrevent = false
+		if(gB_switchPrevent[client])
+			gB_switchPrevent[client] = false
 		else
 		{
 			char sClassname[32]
@@ -449,6 +549,12 @@ MRESReturn Hook_UpdateStepSound_Post(int pThis, DHookParam hParams)
 		SetEntityMoveType(pThis, MOVETYPE_NOCLIP)
 	SetEntityFlags(pThis, GetEntityFlags(pThis) | FL_ATCONTROLS)
 	return MRES_Ignored
+}
+
+public void OnEntityCreated(int entity, const char[] classname)
+{
+	if(StrContains(classname, "trigger") != -1)
+		SDKHook(entity, SDKHook_Touch, SDKTrigger)
 }
 
 Action SDKTrigger(int entity, int other)
