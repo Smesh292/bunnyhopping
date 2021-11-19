@@ -300,11 +300,6 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		float ang[3]
 		ang[0] = frame.ang[0]
 		ang[1] = frame.ang[1]
-		if(gI_tick[0] == 1)
-		{
-			TeleportEntity(client, frame.pos, ang, view_as<float>({0.0, 0.0, 0.0}))
-			return Plugin_Changed
-		}
 		MoveType movetype = MOVETYPE_NOCLIP
 		int flags = GetEntityFlags(client)
 		ApplyFlags(flags, frame.flags, FL_ONGROUND)
@@ -329,24 +324,19 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 				}
 			}
 		}
-		if(gI_tick[0] == gI_tick[1])
-		{
+		if(gI_tick[0] == 1)
+			TeleportEntity(client, frame.pos, ang, view_as<float>({0.0, 0.0, 0.0}))
+		else if(1 < gI_tick[0] < gI_tick[1])
+			TeleportEntity(client, NULL_VECTOR, ang, velPos)
+		else if(gI_tick[0] == gI_tick[1])
 			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, NULL_VECTOR)
-			return Plugin_Changed
-		}
-		TeleportEntity(client, NULL_VECTOR, ang, velPos)
 		gF_time = GetGameTime()
-		return Plugin_Changed
 	}
 	else if(IsFakeClient(client) && IsPlayerAlive(client) && GetGameTime() - gF_time > 3.0 && gB_loaded)
 	{
 		CS_RespawnPlayer(client)
 		gI_tick[0] = 0
-		vel[0] = 0.0 //Prevent bot shaking.
-		vel[1] = 0.0
-		return Plugin_Changed
 	}
-	return Plugin_Continue
 }
 
 void SQLConnect(Database db, const char[] error, any data)
