@@ -2361,11 +2361,14 @@ Action timer_motd(Handle timer, int client)
 {
 	if(IsClientInGame(client))
 	{
+		ConVar hostname = FindConVar("hostname")
+		char hostnameBuffer[256]
+		hostname.GetString(hostnameBuffer, 256)
 		char sTopURL[192]
 		gCV_topURL.GetString(sTopURL, 192)
 		char sTopURLwMap[256]
 		Format(sTopURLwMap, 256, "%s%s", sTopURL, gS_map)
-		ShowMOTDPanel(client, "Bunnyhop Timer", sTopURLwMap, MOTDPANEL_TYPE_URL) //https://forums.alliedmods.net/showthread.php?t=232476
+		ShowMOTDPanel(client, hostnameBuffer, sTopURLwMap, MOTDPANEL_TYPE_URL) //https://forums.alliedmods.net/showthread.php?t=232476
 	}
 }
 
