@@ -100,6 +100,8 @@ int gI_pointsMaxs = 1
 int gI_lastQuery
 Handle gH_cookie
 bool gB_clantagOnce[MAXPLAYERS + 1]
+bool g_jumped[MAXPLAYERS + 1]
+float g_velJump[MAXPLAYERS + 1]
 
 public Plugin myinfo =
 {
@@ -146,6 +148,7 @@ public void OnPluginStart()
 	HookUserMessage(GetUserMessageId("SayText2"), OnMessage, true) //thanks to VerMon idea. https://github.com/shavitush/bhoptimer/blob/master/addons/sourcemod/scripting/shavit-chat.sp#L416
 	HookEvent("player_spawn", OnSpawn)
 	HookEvent("player_death", OnDeath)
+	HookEvent("player_jump", OnJump)
 	LoadTranslations("test.phrases") //https://wiki.alliedmods.net/Translations_(SourceMod_Scripting)
 	gH_start = CreateGlobalForward("Bhop_Start", ET_Hook, Param_Cell)
 	gH_record = CreateGlobalForward("Bhop_Record", ET_Hook, Param_Cell, Param_Float)
@@ -417,6 +420,15 @@ Action OnDeath(Event event, const char[] name, bool dontBroadcast)
 	RemoveEntity(ragdoll)
 }
 
+Action OnJump(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"))
+	g_jumped[client] = true
+	float vel[3]
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel)
+	g_velJump[client] = SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0))
+}
+
 Action cmd_checkpoint(int client, int args)
 {
 	Checkpoint(client)
@@ -507,7 +519,7 @@ public void OnClientPutInServer(int client)
 		}
 	}
 	//gF_Time[client] = 0.0
-	if(!gB_isDevmap)
+	if(!gB_isDevmap && gB_haveZone[2])
 		DrawZone(client, 0.0)
 	gB_msg[client] = true
 	if(!AreClientCookiesCached(client))
@@ -682,7 +694,7 @@ Action cmd_restart(int client, int args)
 	return Plugin_Handled
 }
 
-void Restart(int client)
+void Restart(int client, bool posKeep = false)
 {
 	if(gB_isDevmap)
 		PrintToChat(client, "Turn off devmap.")
@@ -696,11 +708,77 @@ void Restart(int client)
 				Call_StartForward(gH_start)
 				Call_PushCell(client)
 				Call_Finish()
-				float angles[3]
-				GetClientEyeAngles(client, angles)
-				CS_RespawnPlayer(client)
+				int entity
+				bool equimpmented
+				while(FindEntityByClassname(entity, "game_player_equip") > 0)
+				{
+					AcceptEntityInput(entity, "StartTouch") //https://github.com/lua9520/source-engine-2018-hl2_src/blob/3bf9df6b2785fa6d951086978a3e66f49427166a/game/shared/cstrike/cs_gamerules.cpp#L849
+					equimpmented = true
+				}
+				char classname[32]
+				int weapon = GetPlayerWeaponSlot(client, CS_SLOT_SECONDARY)
+				GetEntityClassname(weapon, classname, 32)
+				bool isdefaultpistol
+				if(StrEqual(classname, "weapon_glock") || StrEqual(classname, "weapon_usp"))
+					isdefaultpistol = true
+				if(!equimpmented)
+				{
+					if(isdefaultpistol)
+					{
+						for(int i = 0; i <= 4; i++)
+						{
+							if(i != 2)
+							{
+								if(i != 3)
+								{
+									if(i != 1)
+										if(IsValidEntity(GetPlayerWeaponSlot(client, i)))
+											CS_DropWeapon(client, GetPlayerWeaponSlot(client, i), false)
+								}
+								else
+									for(int j = 0; j <= 3; j++)
+										if(IsValidEntity(GetPlayerWeaponSlot(client, i)))
+											CS_DropWeapon(client, GetPlayerWeaponSlot(client, i), false)
+							}
+						}
+						
+						
+						int ammotype = GetEntProp(weapon, Prop_Send, "m_iPrimaryAmmoType")
+						int start = FindSendPropInfo("CBasePlayer", "m_iAmmo")
+						if(StrEqual(classname, "weapon_glock"))
+						{
+							SetEntProp(weapon, Prop_Send, "m_iClip1", 20)
+							SetEntData(client, (start + (ammotype * 4)), 120) //https://forums.alliedmods.net/showpost.php?p=1460194&postcount=3
+						}
+						else if(StrEqual(classname, "weapon_usp"))
+						{
+							SetEntProp(weapon, Prop_Send, "m_iClip1", 12)
+							SetEntData(client, (start + (ammotype * 4)), 100) //https://forums.alliedmods.net/showpost.php?p=1460194&postcount=3
+						}
+					}
+					else
+					{
+						for(int i = 0; i <= 4; i++)
+						{
+							if(i != 3)
+							{
+								if(i != 1)
+									if(IsValidEntity(GetPlayerWeaponSlot(client, i)))
+										CS_DropWeapon(client, GetPlayerWeaponSlot(client, i), false)
+							}
+							else
+								for(int j = 0; j <= 3; j++)
+									if(IsValidEntity(GetPlayerWeaponSlot(client, i)))
+										CS_DropWeapon(client, GetPlayerWeaponSlot(client, i), false)
+						}
+						if(GetClientTeam(client) == CS_TEAM_T) //https://github.com/lua9520/source-engine-2018-hl2_src/blob/3bf9df6b2785fa6d951086978a3e66f49427166a/game/server/cstrike/cs_player.cpp#L972
+							GivePlayerItem(client, "weapon_glock")
+						else if(GetClientTeam(client) == CS_TEAM_CT)
+							GivePlayerItem(client, "weapon_usp")
+					}
+				}
 				float velNull[3]
-				TeleportEntity(client, gF_originStart, angles, velNull)
+				TeleportEntity(client, posKeep ? NULL_VECTOR : gF_originStart, NULL_VECTOR, g_velJump[client] > 278.0 + 10.0 ? velNull : NULL_VECTOR)
 				if(gB_MenuIsOpen[client])
 					Bhop(client)
 			}
@@ -1528,13 +1606,24 @@ Action SDKTouch(int entity, int other)
 {
 	if(0 < other <= MaxClients && gB_readyToStart[other] && !IsFakeClient(other) && !gB_isDevmap)
 	{
-		if(GetEntityFlags(other) & FL_ONGROUND)
+		if(g_velJump[other] > 278.0 + 10.0)
 		{
-			float vel[3]
-			GetEntPropVector(other, Prop_Data, "m_vecAbsVelocity", vel)
-			float velXY = SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0))
-			if(velXY > 278.0)
-				TeleportEntity(other, NULL_VECTOR, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}))
+			if(GetEntityFlags(other) & FL_ONGROUND)
+			{
+				if(g_jumped[other])
+				{
+					TeleportEntity(other, NULL_VECTOR, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}))
+					g_jumped[other] = false
+				}
+			}
+			else
+			{
+				float vel[3]
+				GetEntPropVector(other, Prop_Data, "m_vecAbsVelocity", vel)
+				float velXY = SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0))
+				if(velXY > 278.0 + 10.0)
+					TeleportEntity(other, NULL_VECTOR, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}))
+			}
 		}
 	}
 }
@@ -1546,7 +1635,7 @@ Action SDKStartTouch(int entity, int other)
 		char sTrigger[32]
 		GetEntPropString(entity, Prop_Data, "m_iName", sTrigger, 32)
 		if(StrEqual(sTrigger, "fakeexpert_startzone"))
-			Restart(other) //expert zone idea.
+			Restart(other, true) //expert zone idea.
 		if(StrEqual(sTrigger, "fakeexpert_endzone"))
 		{
 			if(gB_state[other])
@@ -2159,6 +2248,8 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 			gF_hudTime[client] = GetEngineTime()
 			Hud(client)
 		}
+		if(GetEntityFlags(client) & FL_ONGROUND && g_velJump[client])
+			g_velJump[client] = 0.0
 	}
 }
 
