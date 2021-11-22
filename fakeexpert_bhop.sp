@@ -2365,7 +2365,7 @@ Action timer_motd(Handle timer, int client)
 		gCV_topURL.GetString(sTopURL, 192)
 		char sTopURLwMap[256]
 		Format(sTopURLwMap, 256, "%s%s", sTopURL, gS_map)
-		ShowMOTDPanel(client, "Trikz Timer", sTopURLwMap, MOTDPANEL_TYPE_URL) //https://forums.alliedmods.net/showthread.php?t=232476
+		ShowMOTDPanel(client, "Bunnyhop Timer", sTopURLwMap, MOTDPANEL_TYPE_URL) //https://forums.alliedmods.net/showthread.php?t=232476
 	}
 }
 
