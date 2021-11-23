@@ -248,7 +248,7 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 		sync /= float(g_tickAir[client])
 		sync *= 100.0
 		if(g_ssj[client])
-			PrintToChat(client, "Speed of sixth jump: %.0f, Strafes: %i, Sync: %.0f, Flat: %s", velXY, g_strafeCount[client], sync, flat ? "Yes" : "No")
+			PrintToChat(client, "Speed of sixth jump: %.0f, Strafes: %i, Sync: %.0f%%, Flat: %s", velXY, g_strafeCount[client], sync, flat ? "Yes" : "No")
 		for(int i = 1; i <= MaxClients; i++)
 		{
 			if(IsClientInGame(i) && IsClientObserver(i))
@@ -256,7 +256,7 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 				int observerTarget = GetEntPropEnt(i, Prop_Data, "m_hObserverTarget")
 				int observerMode = GetEntProp(i, Prop_Data, "m_iObserverMode")
 				if(observerMode < 7 && observerTarget == client && g_ssj[i])
-					PrintToChat(i, "Speed of sixth jump: %.0f, Strafes: %i, Sync: %.0f, Flat: %s", velXY, g_strafeCount[client], sync, flat ? "Yes" : "No")
+					PrintToChat(i, "Speed of sixth jump: %.0f, Strafes: %i, Sync: %.0f%%, Flat: %s", velXY, g_strafeCount[client], sync, flat ? "Yes" : "No")
 			}
 		}
 	}
