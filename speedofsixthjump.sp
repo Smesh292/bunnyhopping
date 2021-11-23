@@ -96,25 +96,23 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 Action OnJump(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"))
-	if(gB_ssj[client])
+	gI_jumpCount[client]++
+	gI_tickcount[client] = 0
+	if(gI_jumpCount[client] == 7)
 	{
-		gI_jumpCount[client]++
-		gI_tickcount[client] = 0
-		if(gI_jumpCount[client] == 7)
-		{
-			float vel[3]
-			GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel)
-			float velXY = SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0))
+		float vel[3]
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel)
+		float velXY = SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0))
+		if(gB_ssj[client])
 			PrintToChat(client, "Speed of sixth jump: %.0f", velXY)
-			for(int i = 1; i <= MaxClients; i++)
+		for(int i = 1; i <= MaxClients; i++)
+		{
+			if(IsClientInGame(i) && IsClientObserver(i))
 			{
-				if(IsClientInGame(i) && IsClientObserver(i))
-				{
-					int observerTarget = GetEntPropEnt(i, Prop_Data, "m_hObserverTarget")
-					int observerMode = GetEntProp(i, Prop_Data, "m_iObserverMode")
-					if(observerMode < 7 && observerTarget == client && gB_ssj[i])
-						PrintToChat(i, "Speed of sixth jump: %.0f", velXY)
-				}
+				int observerTarget = GetEntPropEnt(i, Prop_Data, "m_hObserverTarget")
+				int observerMode = GetEntProp(i, Prop_Data, "m_iObserverMode")
+				if(observerMode < 7 && observerTarget == client && gB_ssj[i])
+					PrintToChat(i, "Speed of sixth jump: %.0f", velXY)
 			}
 		}
 	}
