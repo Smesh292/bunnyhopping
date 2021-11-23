@@ -273,7 +273,19 @@ void SQLUpdateUserPoints(Database db, DBResultSet results, const char[] error, a
 void SQLGetPointsMaxs(Database db, DBResultSet results, const char[] error, any data)
 {
 	if(results.FetchRow())
+	{
 		gI_pointsMaxs = results.FetchInt(0)
+		char sQuery[512]
+		for(int i = 1; i <= MaxClients; i++)
+		{
+			if(IsClientInGame(i) && !IsFakeClient(i))
+			{
+				int steamid = GetSteamAccountID(i)
+				Format(sQuery, 512, "SELECT points FROM users WHERE steamid = %i LIMIT 1", steamid)
+				gD_mysql.Query(SQLGetPoints, sQuery, GetClientSerial(i))
+			}
+		}
+	}
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
