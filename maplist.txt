@@ -4,5 +4,7 @@ bhop_danmark
 bhop_eazy_v2
 bhop_japan
 bhop_lego_rnm
+bhop_monority_fix
 bhop_temple_ruins_v2
+bhop_tropic_V2
 bhop_twisted
