@@ -108,7 +108,7 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 		bool flat
 		if(gB_ssj[client])
 		{
-			float result = g_origin[client][1][2] -g_origin[client][0][2] + g_origin[client][2][2] -g_origin[client][0][2] + g_origin[client][3][2] - g_origin[client][0][2] + g_origin[client][4][2] - g_origin[client][0][2] + g_origin[client][5][2] - g_origin[client][0][2] + g_origin[client][6][2] - g_origin[client][0][2]
+			float result = g_origin[client][1][2] - g_origin[client][0][2] + g_origin[client][2][2] - g_origin[client][0][2] + g_origin[client][3][2] - g_origin[client][0][2] + g_origin[client][4][2] - g_origin[client][0][2] + g_origin[client][5][2] - g_origin[client][0][2] + g_origin[client][6][2] - g_origin[client][0][2]
 			if(RoundFloat(result) - 6 == 0)
 				flat = true 
 			PrintToChat(client, "Speed of sixth jump: %.0f, Flat: %s", velXY, flat ? "Yes" : "No")
