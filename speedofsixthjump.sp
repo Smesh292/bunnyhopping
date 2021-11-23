@@ -257,13 +257,7 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"))
 	if(g_jumpCount[client] <= 6)
-	{
 		GetClientAbsOrigin(client, g_origin[client][g_jumpCount[client]])
-		float vel[3]
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel)
-		float velXY = SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0))
-		PrintToServer("%f", velXY) //272.406860 355.861389 427.507019 490.057830 546.421447 597.200988 642.945983 cl_yawspeed 325
-	}
 	g_tickcount[client] = 0
 	if(g_jumpCount[client] == 6)
 	{
