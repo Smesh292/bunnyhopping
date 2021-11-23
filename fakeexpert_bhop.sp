@@ -1693,19 +1693,6 @@ Action SDKStartTouch(int entity, int other)
 							if(gF_haveRecord[other] > gF_Time[other])
 								gF_haveRecord[other] = gF_Time[other]			
 						}
-						for(int i = 1; i <= gI_cpCount; i++)
-						{
-							if(gB_cp[i][other])
-							{
-								int srCPHour = (RoundToFloor(gF_timeDiffCP[i][other]) / 3600) % 24
-								int srCPMinute = (RoundToFloor(gF_timeDiffCP[i][other]) / 60) % 60
-								int srCPSecond = RoundToFloor(gF_timeDiffCP[i][other]) % 60
-								if(gF_TimeCP[i][other] < gF_srCPTime[i])
-									PrintToChatAll("\x01%i. Checkpoint: \x077CFC00-%02.i:%02.i:%02.i", i, srCPHour, srCPMinute, srCPSecond)
-								else
-									PrintToChatAll("\x01%i. Checkpoint: \x07FF0000+%02.i:%02.i:%02.i", i, srCPHour, srCPMinute, srCPSecond)
-							}
-						}
 					}
 					else
 					{
@@ -1741,6 +1728,19 @@ Action SDKStartTouch(int entity, int other)
 							gD_mysql.Query(SQLInsertRecord, sQuery)
 							if(!gF_haveRecord[other])
 								gF_haveRecord[other] = gF_Time[other]
+						}
+					}
+					for(int i = 1; i <= gI_cpCount; i++)
+					{
+						if(gB_cp[i][other])
+						{
+							int srCPHour = (RoundToFloor(gF_timeDiffCP[i][other]) / 3600) % 24
+							int srCPMinute = (RoundToFloor(gF_timeDiffCP[i][other]) / 60) % 60
+							int srCPSecond = RoundToFloor(gF_timeDiffCP[i][other]) % 60
+							if(gF_TimeCP[i][other] < gF_srCPTime[i])
+								PrintToChatAll("\x01%i. Checkpoint: \x077CFC00-%02.i:%02.i:%02.i", i, srCPHour, srCPMinute, srCPSecond)
+							else
+								PrintToChatAll("\x01%i. Checkpoint: \x07FF0000+%02.i:%02.i:%02.i", i, srCPHour, srCPMinute, srCPSecond)
 						}
 					}
 				}
