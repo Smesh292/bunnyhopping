@@ -1,4 +1,5 @@
 bhop_blackrockshooter
+bhop_conquest2_fix
 bhop_danmark
 bhop_eazy_v2
 bhop_japan
