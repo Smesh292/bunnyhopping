@@ -139,6 +139,8 @@ Action timer_bot(Handle timer)
 			if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
 			{
 				replayRunning = true
+				if(!IsPlayerAlive(i))
+					CS_RespawnPlayer(i)
 				break
 			}
 		}
