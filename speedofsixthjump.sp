@@ -34,6 +34,7 @@ bool gB_ssj[MAXPLAYERS + 1]
 int gI_jumpCount[MAXPLAYERS + 1]
 int gI_tickcount[MAXPLAYERS + 1]
 Handle gH_cookie
+float g_origin[MAXPLAYERS + 1][7][3]
 
 public Plugin myinfo =
 {
@@ -47,7 +48,7 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	RegConsoleCmd("sm_ssj", cmd_ssj)
-	HookEvent("player_jump", OnJump)
+	HookEvent("player_jump", OnJump, EventHookMode_PostNoCopy)
 	gH_cookie = RegClientCookie("ssj", "speed of sixth jump", CookieAccess_Protected)
 }
 
@@ -93,18 +94,25 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 	}
 }
 
-Action OnJump(Event event, const char[] name, bool dontBroadcast)
+void OnJump(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"))
-	gI_jumpCount[client]++
+	if(gI_jumpCount[client] <= 6)
+		GetClientAbsOrigin(client, g_origin[client][gI_jumpCount[client]])
 	gI_tickcount[client] = 0
-	if(gI_jumpCount[client] == 7)
+	if(gI_jumpCount[client] == 6)
 	{
 		float vel[3]
 		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel)
 		float velXY = SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0))
+		bool flat
 		if(gB_ssj[client])
-			PrintToChat(client, "Speed of sixth jump: %.0f", velXY)
+		{
+			float result = g_origin[client][1][2] -g_origin[client][0][2] + g_origin[client][2][2] -g_origin[client][0][2] + g_origin[client][3][2] - g_origin[client][0][2] + g_origin[client][4][2] - g_origin[client][0][2] + g_origin[client][5][2] - g_origin[client][0][2] + g_origin[client][6][2] - g_origin[client][0][2]
+			if(RoundFloat(result) - 6 == 0)
+				flat = true 
+			PrintToChat(client, "Speed of sixth jump: %.0f, Flat: %s", velXY, flat ? "Yes" : "No")
+		}
 		for(int i = 1; i <= MaxClients; i++)
 		{
 			if(IsClientInGame(i) && IsClientObserver(i))
@@ -112,8 +120,9 @@ Action OnJump(Event event, const char[] name, bool dontBroadcast)
 				int observerTarget = GetEntPropEnt(i, Prop_Data, "m_hObserverTarget")
 				int observerMode = GetEntProp(i, Prop_Data, "m_iObserverMode")
 				if(observerMode < 7 && observerTarget == client && gB_ssj[i])
-					PrintToChat(i, "Speed of sixth jump: %.0f", velXY)
+					PrintToChat(i, "Speed of sixth jump: %.0f, Flat: %s", velXY, flat ? "Yes" : "No")
 			}
 		}
 	}
+	gI_jumpCount[client]++
 }
