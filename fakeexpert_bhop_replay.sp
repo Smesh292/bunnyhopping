@@ -150,7 +150,7 @@ Action timer_bot(Handle timer)
 		for(int i = 1; i <= MaxClients; i++)
 			if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
 				botCount++
-		if(botCount >= 2)
+		if(botCount > 1)
 		{
 			for(int i = 1; i <= MaxClients; i++)
 			{
