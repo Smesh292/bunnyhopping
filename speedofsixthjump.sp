@@ -45,6 +45,7 @@ bool g_strafeBlockA[MAXPLAYERS + 1]
 bool g_strafeBlockS[MAXPLAYERS + 1]
 bool g_strafeBlockW[MAXPLAYERS + 1]
 float g_dotTime[MAXPLAYERS + 1]
+float g_gain[MAXPLAYERS + 1]
 
 public Plugin myinfo =
 {
@@ -107,6 +108,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 				g_strafeBlockA[client] = false
 				g_strafeBlockS[client] = false
 				g_strafeBlockW[client] = false
+				g_gain[client] = 0.0
 			}
 			g_tickcount[client]++
 		}
@@ -223,6 +225,31 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 				//	Format(gS_style[client], 32, "Sideways")
 			}
 		}
+		//https://forums.alliedmods.net/showthread.php?t=287039 gain calculations
+		float velocity[3]
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", velocity)
+		velocity[2] = 0.0
+		float gaincoeff
+		float fore[3], side[3], wishvel[3], wishdir[3]
+		float wishspeed, wishspd, currentgain
+		GetAngleVectors(angles, fore, side, NULL_VECTOR)
+		fore[2] = 0.0
+		side[2] = 0.0
+		NormalizeVector(fore, fore)
+		NormalizeVector(side, side)
+		for(int i = 0; i < 2; i++)
+			wishvel[i] = fore[i] * vel[0] + side[i] * vel[1]
+		wishspeed = NormalizeVector(wishvel, wishdir)
+		if(wishspeed > GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") && GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") != 0.0)
+			wishspeed = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed")
+		if(wishspeed)
+		{
+			wishspd = (wishspeed > 30.0) ? 30.0 : wishspeed
+			currentgain = GetVectorDotProduct(velocity, wishdir)
+			if(currentgain < 30.0)
+				gaincoeff = (wishspd - FloatAbs(currentgain)) / wishspd
+			g_gain[client] += gaincoeff
+		}
 	}
 }
 
@@ -230,7 +257,13 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"))
 	if(g_jumpCount[client] <= 6)
+	{
 		GetClientAbsOrigin(client, g_origin[client][g_jumpCount[client]])
+		float vel[3]
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel)
+		float velXY = SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0))
+		PrintToServer("%f", velXY) //272.406860 355.861389 427.507019 490.057830 546.421447 597.200988 642.945983 cl_yawspeed 325
+	}
 	g_tickcount[client] = 0
 	if(g_jumpCount[client] == 6)
 	{
@@ -247,8 +280,12 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 			sync = 0.0
 		sync /= float(g_tickAir[client])
 		sync *= 100.0
+		float gain = g_gain[client]
+		gain /= g_tickAir[client]
+		gain *= 100.0
+		gain = RoundToFloor(gain * 100.0 + 0.5) / 100.0
 		if(g_ssj[client])
-			PrintToChat(client, "Speed of sixth jump: %.0f, Strafes: %i, Sync: %.0f%%, Flat: %s", velXY, g_strafeCount[client], sync, flat ? "Yes" : "No")
+			PrintToChat(client, "Speed of sixth jump: %.0f, Strafes: %i, Sync: %.0f%%, Gain: %.0f%%, Flat: %s", velXY, g_strafeCount[client], sync, gain, flat ? "Yes" : "No")
 		for(int i = 1; i <= MaxClients; i++)
 		{
 			if(IsClientInGame(i) && IsClientObserver(i))
@@ -256,7 +293,7 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 				int observerTarget = GetEntPropEnt(i, Prop_Data, "m_hObserverTarget")
 				int observerMode = GetEntProp(i, Prop_Data, "m_iObserverMode")
 				if(observerMode < 7 && observerTarget == client && g_ssj[i])
-					PrintToChat(i, "Speed of sixth jump: %.0f, Strafes: %i, Sync: %.0f%%, Flat: %s", velXY, g_strafeCount[client], sync, flat ? "Yes" : "No")
+					PrintToChat(i, "Speed of sixth jump: %.0f, Strafes: %i, Sync: %.0f%%, Gain: %.0f%%, Flat: %s", velXY, g_strafeCount[client], sync, gain, flat ? "Yes" : "No")
 			}
 		}
 	}
