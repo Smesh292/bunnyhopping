@@ -41,9 +41,9 @@ float g_timerTime[MAXPLAYERS + 1]
 bool g_state[MAXPLAYERS + 1]
 char g_map[192]
 bool g_dbPassed
-float g_originStart[3]
+float g_cpOriginStart[3]
 
-float g_cpOrigin[2][11][3]
+float g_cpPos[2][11][3]
 bool g_cp[11][MAXPLAYERS + 1]
 bool g_cpLock[11][MAXPLAYERS + 1]
 float g_cpTimeClient[11][MAXPLAYERS + 1]
@@ -58,13 +58,13 @@ ConVar g_urlTop
 
 bool g_menuOpened[MAXPLAYERS + 1]
 
-float g_devmapCount[2]
+int g_devmapCount[2]
 bool g_devmap
 float g_devmapTime
 
-float g_origin[MAXPLAYERS + 1][2][3]
-float g_eyeAngles[MAXPLAYERS + 1][2][3]
-float g_velocity[MAXPLAYERS + 1][2][3]
+float g_cpOrigin[MAXPLAYERS + 1][2][3]
+float g_cpAng[MAXPLAYERS + 1][2][3]
+float g_cpVel[MAXPLAYERS + 1][2][3]
 bool g_cpToggled[MAXPLAYERS + 1][2]
 
 bool g_zoneHave[3]
@@ -473,24 +473,24 @@ int checkpoint_handler(Menu menu, MenuAction action, int param1, int param2)
 			{
 				case 0:
 				{
-					GetClientAbsOrigin(param1, g_origin[param1][0])
-					GetClientEyeAngles(param1, g_eyeAngles[param1][0]) //https://github.com/Smesh292/trikz/blob/main/checkpoint.sp#L101
-					GetEntPropVector(param1, Prop_Data, "m_vecAbsVelocity", g_velocity[param1][0])
+					GetClientAbsOrigin(param1, g_cpOrigin[param1][0])
+					GetClientEyeAngles(param1, g_cpAng[param1][0]) //https://github.com/Smesh292/trikz/blob/main/checkpoint.sp#L101
+					GetEntPropVector(param1, Prop_Data, "m_vecAbsVelocity", g_cpVel[param1][0])
 					if(!g_cpToggled[param1][0])
 						g_cpToggled[param1][0] = true
 				}
 				case 1:
-					TeleportEntity(param1, g_origin[param1][0], g_eyeAngles[param1][0], g_velocity[param1][0])
+					TeleportEntity(param1, g_cpOrigin[param1][0], g_cpAng[param1][0], g_cpVel[param1][0])
 				case 2:
 				{
-					GetClientAbsOrigin(param1, g_origin[param1][1])
-					GetClientEyeAngles(param1, g_eyeAngles[param1][1])
-					GetEntPropVector(param1, Prop_Data, "m_vecAbsVelocity", g_velocity[param1][1])
+					GetClientAbsOrigin(param1, g_cpOrigin[param1][1])
+					GetClientEyeAngles(param1, g_cpAng[param1][1])
+					GetEntPropVector(param1, Prop_Data, "m_vecAbsVelocity", g_cpVel[param1][1])
 					if(!g_cpToggled[param1][1])
 						g_cpToggled[param1][1] = true
 				}
 				case 3:
-					TeleportEntity(param1, g_origin[param1][1], g_eyeAngles[param1][1], g_velocity[param1][1])
+					TeleportEntity(param1, g_cpOrigin[param1][1], g_cpAng[param1][1], g_cpVel[param1][1])
 			}
 			Checkpoint(param1)
 		}
@@ -524,9 +524,9 @@ public void OnClientPutInServer(int client)
 		g_cpToggled[client][i] = false
 		for(int j = 0; j <= 2; j++)
 		{
-			g_origin[client][i][j] = 0.0
-			g_eyeAngles[client][i][j] = 0.0
-			g_velocity[client][i][j] = 0.0
+			g_cpOrigin[client][i][j] = 0.0
+			g_cpAng[client][i][j] = 0.0
+			g_cpVel[client][i][j] = 0.0
 		}
 	}
 	//g_timerTime[client] = 0.0
@@ -789,7 +789,7 @@ void Restart(int client, bool posKeep = false)
 					}
 				}
 				float velNull[3]
-				TeleportEntity(client, posKeep ? NULL_VECTOR : g_originStart, NULL_VECTOR, g_velJump[client] > 278.0 + 10.0 ? velNull : NULL_VECTOR)
+				TeleportEntity(client, posKeep ? NULL_VECTOR : g_cpOriginStart, NULL_VECTOR, g_velJump[client] > 278.0 + 10.0 ? velNull : NULL_VECTOR)
 				if(g_menuOpened[client])
 					Bhop(client)
 			}
@@ -816,9 +816,9 @@ void CreateStart()
 	g_center[0][1] = (g_zoneStartOrigin[0][1] + g_zoneStartOrigin[1][1]) / 2.0
 	g_center[0][2] = (g_zoneStartOrigin[0][2] + g_zoneStartOrigin[1][2]) / 2.0
 	TeleportEntity(entity, g_center[0], NULL_VECTOR, NULL_VECTOR) //Thanks to https://amx-x.ru/viewtopic.php?f=14&t=15098 http://world-source.ru/forum/102-3743-1
-	g_originStart[0] = g_center[0][0]
-	g_originStart[1] = g_center[0][1]
-	g_originStart[2] = g_center[0][2] + 1.0
+	g_cpOriginStart[0] = g_center[0][0]
+	g_cpOriginStart[1] = g_center[0][1]
+	g_cpOriginStart[2] = g_center[0][2] + 1.0
 	float mins[3]
 	float maxs[3]
 	for(int i = 0; i <= 1; i++)
@@ -1185,7 +1185,7 @@ Action cmd_cpmins(int client, int args)
 			if(cpnum > 0)
 			{
 				PrintToChat(client, "CP: No.%i", cpnum)
-				GetClientAbsOrigin(client, g_cpOrigin[0][cpnum])
+				GetClientAbsOrigin(client, g_cpPos[0][cpnum])
 				g_zoneFirst[2] = true
 			}
 		}
@@ -1201,7 +1201,7 @@ void SQLCPRemoved(Database db, DBResultSet results, const char[] error, any data
 	if(results.HasResults == false)
 		PrintToServer("Checkpoint zone no. %i successfuly deleted.", data)
 	char query[512]
-	Format(query, 512, "INSERT INTO cp (cpnum, cpx, cpy, cpz, cpx2, cpy2, cpz2, map) VALUES (%i, %i, %i, %i, %i, %i, %i, '%s')", data, RoundFloat(g_cpOrigin[0][data][0]), RoundFloat(g_cpOrigin[0][data][1]), RoundFloat(g_cpOrigin[0][data][2]), RoundFloat(g_cpOrigin[1][data][0]), RoundFloat(g_cpOrigin[1][data][1]), RoundFloat(g_cpOrigin[1][data][2]), g_map)
+	Format(query, 512, "INSERT INTO cp (cpnum, cpx, cpy, cpz, cpx2, cpy2, cpz2, map) VALUES (%i, %i, %i, %i, %i, %i, %i, '%s')", data, RoundFloat(g_cpPos[0][data][0]), RoundFloat(g_cpPos[0][data][1]), RoundFloat(g_cpPos[0][data][2]), RoundFloat(g_cpPos[1][data][0]), RoundFloat(g_cpPos[1][data][1]), RoundFloat(g_cpPos[1][data][2]), g_map)
 	g_mysql.Query(SQLCPInserted, query, data)
 }
 
@@ -1218,7 +1218,7 @@ Action cmd_cpmaxs(int client, int args)
 		int cpnum = StringToInt(sCmd)
 		if(cpnum > 0)
 		{
-			GetClientAbsOrigin(client, g_cpOrigin[1][cpnum])
+			GetClientAbsOrigin(client, g_cpPos[1][cpnum])
 			char query[512]
 			Format(query, 512, "DELETE FROM cp WHERE cpnum = %i AND map = '%s'", cpnum, g_map)
 			g_mysql.Query(SQLCPRemoved, query, cpnum)
@@ -1412,28 +1412,28 @@ int zones2_handler(Menu menu, MenuAction action, int param1, int param2)
 				TeleportEntity(param1, g_center[cpnum + 1], NULL_VECTOR, NULL_VECTOR)
 			Format(formatCP, 16, "%i;1", cpnum)
 			if(StrEqual(sItem, formatCP))
-				g_cpOrigin[0][cpnum][0] += 16.0
+				g_cpPos[0][cpnum][0] += 16.0
 			Format(formatCP, 16, "%i;2", cpnum)
 			if(StrEqual(sItem, formatCP))
-				g_cpOrigin[0][cpnum][0] -= 16.0
+				g_cpPos[0][cpnum][0] -= 16.0
 			Format(formatCP, 16, "%i;3", cpnum)
 			if(StrEqual(sItem, formatCP))
-				g_cpOrigin[0][cpnum][1] += 16.0
+				g_cpPos[0][cpnum][1] += 16.0
 			Format(formatCP, 16, "%i;4", cpnum)
 			if(StrEqual(sItem, formatCP))
-				g_cpOrigin[0][cpnum][1] -= 16.0
+				g_cpPos[0][cpnum][1] -= 16.0
 			Format(formatCP, 16, "%i;5", cpnum)
 			if(StrEqual(sItem, formatCP))
-				g_cpOrigin[1][cpnum][0] += 16.0
+				g_cpPos[1][cpnum][0] += 16.0
 			Format(formatCP, 16, "%i;6", cpnum)
 			if(StrEqual(sItem, formatCP))
-				g_cpOrigin[1][cpnum][0] -= 16.0
+				g_cpPos[1][cpnum][0] -= 16.0
 			Format(formatCP, 16, "%i;7", cpnum)
 			if(StrEqual(sItem, formatCP))
-				g_cpOrigin[1][cpnum][1] += 16.0
+				g_cpPos[1][cpnum][1] += 16.0
 			Format(formatCP, 16, "%i;8", cpnum)
 			if(StrEqual(sItem, formatCP))
-				g_cpOrigin[1][cpnum][1] -= 16.0
+				g_cpPos[1][cpnum][1] -= 16.0
 			char query[512]
 			if(StrEqual(sItem, "startupdate"))
 			{
@@ -1447,7 +1447,7 @@ int zones2_handler(Menu menu, MenuAction action, int param1, int param2)
 			}
 			else if(StrEqual(sItem, "cpupdate"))
 			{
-				Format(query, 512, "UPDATE cp SET cpx = %i, cpy = %i, cpz = %i, cpx2 = %i, cpy2 = %i, cpz2 = %i WHERE cpnum = %i AND map = '%s'", RoundFloat(g_cpOrigin[0][cpnum][0]), RoundFloat(g_cpOrigin[0][cpnum][1]), RoundFloat(g_cpOrigin[0][cpnum][2]), RoundFloat(g_cpOrigin[1][cpnum][0]), RoundFloat(g_cpOrigin[1][cpnum][1]), RoundFloat(g_cpOrigin[1][cpnum][2]), cpnum, g_map)
+				Format(query, 512, "UPDATE cp SET cpx = %i, cpy = %i, cpz = %i, cpx2 = %i, cpy2 = %i, cpz2 = %i WHERE cpnum = %i AND map = '%s'", RoundFloat(g_cpPos[0][cpnum][0]), RoundFloat(g_cpPos[0][cpnum][1]), RoundFloat(g_cpPos[0][cpnum][2]), RoundFloat(g_cpPos[1][cpnum][0]), RoundFloat(g_cpPos[1][cpnum][1]), RoundFloat(g_cpPos[1][cpnum][2]), cpnum, g_map)
 				g_mysql.Query(SQLUpdateZone, query, cpnum + 1)
 			}
 			menu.DisplayAt(param1, GetMenuSelectionPosition(), MENU_TIME_FOREVER) //https://forums.alliedmods.net/showthread.php?p=2091775
@@ -1522,12 +1522,12 @@ void SQLCPSetup(Database db, DBResultSet results, const char[] error, DataPack d
 	int cp = dp.ReadCell()
 	if(results.FetchRow())
 	{
-		g_cpOrigin[0][cp][0] = results.FetchFloat(0)
-		g_cpOrigin[0][cp][1] = results.FetchFloat(1)
-		g_cpOrigin[0][cp][2] = results.FetchFloat(2)
-		g_cpOrigin[1][cp][0] = results.FetchFloat(3)
-		g_cpOrigin[1][cp][1] = results.FetchFloat(4)
-		g_cpOrigin[1][cp][2] = results.FetchFloat(5)
+		g_cpPos[0][cp][0] = results.FetchFloat(0)
+		g_cpPos[0][cp][1] = results.FetchFloat(1)
+		g_cpPos[0][cp][2] = results.FetchFloat(2)
+		g_cpPos[1][cp][0] = results.FetchFloat(3)
+		g_cpPos[1][cp][1] = results.FetchFloat(4)
+		g_cpPos[1][cp][2] = results.FetchFloat(5)
 		if(!g_devmap)
 			createcp(cp)
 		g_cpCount++
@@ -1556,18 +1556,18 @@ void createcp(int cpnum)
 	DispatchSpawn(entity)
 	SetEntityModel(entity, "models/player/t_arctic.mdl")
 	//https://stackoverflow.com/questions/4355894/how-to-get-center-of-set-of-points-using-python
-	g_center[cpnum + 1][0] = (g_cpOrigin[1][cpnum][0] + g_cpOrigin[0][cpnum][0]) / 2.0
-	g_center[cpnum + 1][1] = (g_cpOrigin[1][cpnum][1] + g_cpOrigin[0][cpnum][1]) / 2.0
-	g_center[cpnum + 1][2] = (g_cpOrigin[1][cpnum][2] + g_cpOrigin[0][cpnum][2]) / 2.0
+	g_center[cpnum + 1][0] = (g_cpPos[1][cpnum][0] + g_cpPos[0][cpnum][0]) / 2.0
+	g_center[cpnum + 1][1] = (g_cpPos[1][cpnum][1] + g_cpPos[0][cpnum][1]) / 2.0
+	g_center[cpnum + 1][2] = (g_cpPos[1][cpnum][2] + g_cpPos[0][cpnum][2]) / 2.0
 	TeleportEntity(entity, g_center[cpnum + 1], NULL_VECTOR, NULL_VECTOR) //Thanks to https://amx-x.ru/viewtopic.php?f=14&t=15098 http://world-source.ru/forum/102-3743-1
 	float mins[3]
 	float maxs[3]
 	for(int i = 0; i <= 1; i++)
 	{
-		mins[i] = (g_cpOrigin[0][cpnum][i] - g_cpOrigin[1][cpnum][i]) / 2.0
+		mins[i] = (g_cpPos[0][cpnum][i] - g_cpPos[1][cpnum][i]) / 2.0
 		if(mins[i] > 0.0)
 			mins[i] *= -1.0
-		maxs[i] = (g_cpOrigin[0][cpnum][i] - g_cpOrigin[1][cpnum][i]) / 2.0
+		maxs[i] = (g_cpPos[0][cpnum][i] - g_cpPos[1][cpnum][i]) / 2.0
 		if(maxs[i] < 0.0)
 			maxs[i] *= -1.0
 	}
@@ -2194,13 +2194,13 @@ void DrawZone(int client, float life)
 		for(int i = 2; i <= zones; i++)
 		{
 			int cpnum = i - 1
-			start[i][0] = (g_cpOrigin[0][cpnum][0] < g_cpOrigin[1][cpnum][0]) ? g_cpOrigin[0][cpnum][0] : g_cpOrigin[1][cpnum][0]
-			start[i][1] = (g_cpOrigin[0][cpnum][1] < g_cpOrigin[1][cpnum][1]) ? g_cpOrigin[0][cpnum][1] : g_cpOrigin[1][cpnum][1]
-			start[i][2] = (g_cpOrigin[0][cpnum][2] < g_cpOrigin[1][cpnum][2]) ? g_cpOrigin[0][cpnum][2] : g_cpOrigin[1][cpnum][2]
+			start[i][0] = (g_cpPos[0][cpnum][0] < g_cpPos[1][cpnum][0]) ? g_cpPos[0][cpnum][0] : g_cpPos[1][cpnum][0]
+			start[i][1] = (g_cpPos[0][cpnum][1] < g_cpPos[1][cpnum][1]) ? g_cpPos[0][cpnum][1] : g_cpPos[1][cpnum][1]
+			start[i][2] = (g_cpPos[0][cpnum][2] < g_cpPos[1][cpnum][2]) ? g_cpPos[0][cpnum][2] : g_cpPos[1][cpnum][2]
 			start[i][2] += 3.0
-			end[i][0] = (g_cpOrigin[0][cpnum][0] > g_cpOrigin[1][cpnum][0]) ? g_cpOrigin[0][cpnum][0] : g_cpOrigin[1][cpnum][0]
-			end[i][1] = (g_cpOrigin[0][cpnum][1] > g_cpOrigin[1][cpnum][1]) ? g_cpOrigin[0][cpnum][1] : g_cpOrigin[1][cpnum][1]
-			end[i][2] = (g_cpOrigin[0][cpnum][2] > g_cpOrigin[1][cpnum][2]) ? g_cpOrigin[0][cpnum][2] : g_cpOrigin[1][cpnum][2]
+			end[i][0] = (g_cpPos[0][cpnum][0] > g_cpPos[1][cpnum][0]) ? g_cpPos[0][cpnum][0] : g_cpPos[1][cpnum][0]
+			end[i][1] = (g_cpPos[0][cpnum][1] > g_cpPos[1][cpnum][1]) ? g_cpPos[0][cpnum][1] : g_cpPos[1][cpnum][1]
+			end[i][2] = (g_cpPos[0][cpnum][2] > g_cpPos[1][cpnum][2]) ? g_cpPos[0][cpnum][2] : g_cpPos[1][cpnum][2]
 			end[i][2] += 3.0
 		}
 	}
@@ -2332,13 +2332,13 @@ int devmap_handler(Menu menu, MenuAction action, int param1, int param2)
 				{
 					g_devmapCount[1]++
 					g_voters--
-					devmap()
+					Devmap()
 				}
 				case 1:
 				{
 					g_devmapCount[0]++
 					g_voters--
-					devmap()
+					Devmap()
 				}
 			}
 		}
@@ -2348,30 +2348,30 @@ int devmap_handler(Menu menu, MenuAction action, int param1, int param2)
 Action timer_devmap(Handle timer)
 {
 	//devmap idea by expert zone. thanks to ed and maru. thanks to lon to give tp idea for server i could made it like that "profesional style".
-	devmap(true)
+	Devmap(true)
 }
 
-void devmap(bool force = false)
+void Devmap(bool force = false)
 {
 	if(force || !g_voters)
 	{
 		if((g_devmapCount[1] || g_devmapCount[0]) && g_devmapCount[1] >= g_devmapCount[0])
 		{
 			if(g_devmap)
-				PrintToChatAll("Devmap will be disabled. \"Yes\" chose %.0f%%% or %.0f of %.0f players.", (g_devmapCount[1] / (g_devmapCount[0] + g_devmapCount[1])) * 100.0, g_devmapCount[1], g_devmapCount[0] + g_devmapCount[1])
+				PrintToChatAll("Devmap will be disabled. \"Yes\" chose %.0f%%% or %.0f of %.0f players.", (float(g_devmapCount[1]) / (float(g_devmapCount[0]) + float(g_devmapCount[1]))) * 100.0, float(g_devmapCount[1]), float(g_devmapCount[0]) + float(g_devmapCount[1]))
 			else
-				PrintToChatAll("Devmap will be enabled. \"Yes\" chose %.0f%%% or %.0f of %.0f players.", (g_devmapCount[1] / (g_devmapCount[0] + g_devmapCount[1])) * 100.0, g_devmapCount[1], g_devmapCount[0] + g_devmapCount[1])
+				PrintToChatAll("Devmap will be enabled. \"Yes\" chose %.0f%%% or %.0f of %.0f players.", (float(g_devmapCount[1]) / (float(g_devmapCount[0]) + float(g_devmapCount[1]))) * 100.0, float(g_devmapCount[1]), float(g_devmapCount[0]) + float(g_devmapCount[1]))
 			CreateTimer(5.0, timer_changelevel, g_devmap ? false : true)
 		}
 		else if((g_devmapCount[1] || g_devmapCount[0]) && g_devmapCount[1] <= g_devmapCount[0])
 		{
 			if(g_devmap)
-				PrintToChatAll("Devmap will be continue. \"No\" chose %.0f%%% or %.0f of %.0f players.", (g_devmapCount[0] / (g_devmapCount[0] + g_devmapCount[1])) * 100.0, g_devmapCount[0], g_devmapCount[0] + g_devmapCount[1]) //google translate russian to english.
+				PrintToChatAll("Devmap will be continue. \"No\" chose %.0f%%% or %.0f of %.0f players.", (float(g_devmapCount[0]) / (float(g_devmapCount[0]) + float(g_devmapCount[1]))) * 100.0, float(g_devmapCount[0]), float(g_devmapCount[0]) + float(g_devmapCount[1])) //google translate russian to english.
 			else
-				PrintToChatAll("Devmap will not be enabled. \"No\" chose %.0f%%% or %.0f of %.0f players.", (g_devmapCount[0] / (g_devmapCount[0] + g_devmapCount[1])) * 100.0, g_devmapCount[0], g_devmapCount[0] + g_devmapCount[1])
+				PrintToChatAll("Devmap will not be enabled. \"No\" chose %.0f%%% or %.0f of %.0f players.", (float(g_devmapCount[0]) / (float(g_devmapCount[0]) + float(g_devmapCount[1]))) * 100.0, float(g_devmapCount[0]), float(g_devmapCount[0]) + float(g_devmapCount[1]))
 		}
 		for(int i = 0; i <= 1; i++)
-			g_devmapCount[i] = 0.0
+			g_devmapCount[i] = 0
 	}
 }
 
@@ -2394,11 +2394,10 @@ Action timer_motd(Handle timer, int client)
 		ConVar hostname = FindConVar("hostname")
 		char hostnameBuffer[256]
 		hostname.GetString(hostnameBuffer, 256)
-		char sTopURL[192]
-		g_urlTop.GetString(sTopURL, 192)
-		char sTopURLwMap[256]
-		Format(sTopURLwMap, 256, "%s%s", sTopURL, g_map)
-		ShowMOTDPanel(client, hostnameBuffer, sTopURLwMap, MOTDPANEL_TYPE_URL) //https://forums.alliedmods.net/showthread.php?t=232476
+		char urlTop[192]
+		g_urlTop.GetString(urlTop, 192)
+		Format(urlTop, 256, "%s%s", urlTop, g_map)
+		ShowMOTDPanel(client, hostnameBuffer, urlTop, MOTDPANEL_TYPE_URL) //https://forums.alliedmods.net/showthread.php?t=232476
 	}
 }
 
@@ -2442,12 +2441,12 @@ int afk_handler(Menu menu, MenuAction action, int param1, int param2)
 				{
 					g_afk[param1] = true
 					g_voters--
-					afk(g_afkClient)
+					AFK(g_afkClient)
 				}
 				case 1:
 				{
 					g_voters--
-					afk(g_afkClient)
+					AFK(g_afkClient)
 				}
 			}
 		}
@@ -2457,10 +2456,10 @@ int afk_handler(Menu menu, MenuAction action, int param1, int param2)
 Action timer_afk(Handle timer, int client)
 {
 	//afk idea by expert zone. thanks to ed and maru. thanks to lon to give tp idea for server i could made it like that "profesional style".
-	afk(client, true)
+	AFK(client, true)
 }
 
-void afk(int client, bool force = false)
+void AFK(int client, bool force = false)
 {
 	if(force || !g_voters)
 		for(int i = 1; i <= MaxClients; i++)
