@@ -935,9 +935,9 @@ public Action OnClientCommandKeyValues(int client, KeyValues kv)
 {
 	if(!g_devmap)
 	{
-		char sCmd[64] //https://forums.alliedmods.net/showthread.php?t=270684
-		kv.GetSectionName(sCmd, 64)
-		if(StrEqual(sCmd, "ClanTagChanged"))
+		char name[64] //https://forums.alliedmods.net/showthread.php?t=270684
+		kv.GetSectionName(name, 64)
+		if(StrEqual(name, "ClanTagChanged"))
 			CS_GetClientClanTag(client, g_clantag[client][0], 256)
 	}
 }
@@ -950,61 +950,6 @@ Action cmd_test(int client, int args)
 	GetConVarString(g_steamid, steamid, 64)
 	if(StrEqual(steamid, steamIDcurrent)) //https://sm.alliedmods.net/new-api/
 	{
-		PrintToServer("TickCount: %i", GetGameTickCount())
-		PrintToServer("GetTime: %i", GetTime())
-		PrintToServer("GetGameTime: %f", GetGameTime())
-		PrintToServer("GetEngineTime: %f", GetEngineTime())
-		PrintToServer("GetTickInterval: %f, tickrate: %f (1.0 / GetTickInterval())", GetTickInterval(), 1.0 / GetTickInterval()) //https://github.com/shavitush/bhoptimer/blob/master/addons/sourcemod/scripting/shavit-replay.sp#L386
-		float round = 123.123
-		PrintToServer("RoundFloat: %i", RoundFloat(round))
-		PrintToServer("RoundToCeil: %i", RoundToCeil(round))
-		PrintToServer("RoundToFloor: %i", RoundToFloor(round))
-		PrintToServer("RoundToNearest: %i", RoundToNearest(round))
-		PrintToServer("RoundToZero: %i", RoundToZero(round))
-		/*RoundFloat: 123
-		RoundToCeil: 124
-		RoundToFloor: 123
-		RoundToNearest: 123
-		RoundToZero: 123*/
-		round = 123.912
-		PrintToServer("RoundFloat: %i", RoundFloat(round))
-		PrintToServer("RoundToCeil: %i", RoundToCeil(round))
-		PrintToServer("RoundToFloor: %i", RoundToFloor(round))
-		PrintToServer("RoundToNearest: %i", RoundToNearest(round))
-		PrintToServer("RoundToZero: %i", RoundToZero(round))
-		/*
-		RoundFloat: 124
-		RoundToCeil: 124
-		RoundToFloor: 123
-		RoundToNearest: 124
-		RoundToZero: 123
-		*/
-		float x = 0.0
-		if(x)
-			PrintToServer("%f == 0.0 | true", x)
-		else
-			PrintToServer("%f == 0.0 | false", x)
-		x = 1.0
-		if(x)
-			PrintToServer("%f == 1.0 | true", x)
-		else
-			PrintToServer("%f == 1.0 | false", x)
-		x = -1.0
-		if(x)
-			PrintToServer("%f == -1.0 | true", x)
-		else
-			PrintToServer("%f == -1.0 | false", x)
-		x = 0.1
-		if(x)
-			PrintToServer("%f == 0.1 | true", x)
-		else
-			PrintToServer("%f == 0.1 | false", x)
-		/*
-		0.000000 == 0.0 | false
-		1.000000 == 1.0 | true
-		-1.000000 == -1.0 | true
-		0.100000 == 0.1 | true
-		*/
 		char text[256]
 		char name[MAX_NAME_LENGTH]
 		GetClientName(client, name, MAX_NAME_LENGTH)
@@ -1179,9 +1124,9 @@ Action cmd_cpmins(int client, int args)
 	{
 		if(g_devmap)
 		{
-			char sCmd[512]
-			GetCmdArg(args, sCmd, 512)
-			int cpnum = StringToInt(sCmd)
+			char cmd[512]
+			GetCmdArg(args, cmd, 512)
+			int cpnum = StringToInt(cmd)
 			if(cpnum > 0)
 			{
 				PrintToChat(client, "CP: No.%i", cpnum)
@@ -1213,9 +1158,9 @@ Action cmd_cpmaxs(int client, int args)
 	GetConVarString(g_steamid, steamid, 64)
 	if(StrEqual(steamid, steamIDcurrent) && g_zoneFirst[2])
 	{
-		char sCmd[512]
-		GetCmdArg(args, sCmd, 512)
-		int cpnum = StringToInt(sCmd)
+		char cmd[512]
+		GetCmdArg(args, cmd, 512)
+		int cpnum = StringToInt(cmd)
 		if(cpnum > 0)
 		{
 			GetClientAbsOrigin(client, g_cpPos[1][cpnum])
