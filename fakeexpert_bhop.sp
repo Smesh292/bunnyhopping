@@ -78,7 +78,7 @@ bool g_sourceTV
 bool g_zoneFirst[3]
 
 int g_zoneModel[3]
-bool g_sourceTVchangedFileName = true
+bool g_sourceTVchangedFilename = true
 int g_cpCount
 float g_afkTime
 bool g_afk[MAXPLAYERS + 1]
@@ -171,14 +171,14 @@ public void OnMapStart()
 	bool sourceTV = sourceTVConVar.BoolValue //https://github.com/alliedmodders/sourcemod/blob/master/plugins/funvotes.sp#L280
 	if(sourceTV)
 	{
-		if(!g_sourceTVchangedFileName)
+		if(!g_sourceTVchangedFilename)
 		{
-			char fileNameOld[256]
-			Format(fileNameOld, 256, "%s-%s-%s.dem", g_date, g_time, g_map)
-			char fileNameNew[256]
-			Format(fileNameNew, 256, "%s-%s-%s-ServerRecord.dem", g_date, g_time, g_map)
-			RenameFile(fileNameNew, fileNameOld)
-			g_sourceTVchangedFileName = true
+			char filenameOld[256]
+			Format(filenameOld, 256, "%s-%s-%s.dem", g_date, g_time, g_map)
+			char filenameNew[256]
+			Format(filenameNew, 256, "%s-%s-%s-ServerRecord.dem", g_date, g_time, g_map)
+			RenameFile(filenameNew, filenameOld)
+			g_sourceTVchangedFilename = true
 		}
 		if(!g_devmap)
 		{
@@ -302,17 +302,17 @@ public void OnMapEnd()
 	if(sourceTV)
 	{
 		ServerCommand("tv_stoprecord")
-		char fileNameOld[256]
-		Format(fileNameOld, 256, "%s-%s-%s.dem", g_date, g_time, g_map)
+		char filenameOld[256]
+		Format(filenameOld, 256, "%s-%s-%s.dem", g_date, g_time, g_map)
 		if(g_ServerRecord)
 		{
-			char fileNameNew[256]
-			Format(fileNameNew, 256, "%s-%s-%s-ServerRecord.dem", g_date, g_time, g_map)
-			RenameFile(fileNameNew, fileNameOld)
+			char filenameNew[256]
+			Format(filenameNew, 256, "%s-%s-%s-ServerRecord.dem", g_date, g_time, g_map)
+			RenameFile(filenameNew, filenameOld)
 			g_ServerRecord = false
 		}
 		else
-			DeleteFile(fileNameOld)
+			DeleteFile(filenameOld)
 	}
 }
 
@@ -329,8 +329,8 @@ Action OnMessage(UserMsg msg_id, BfRead msg, const int[] players, int playersNum
 	if(!g_msg[client])
 		return Plugin_Handled
 	g_msg[client] = false
-	char msgBufferFormated[32]
-	Format(msgBufferFormated, 32, "%s", msgBuffer)
+	char msgFormated[32]
+	Format(msgFormated, 32, "%s", msgBuffer)
 	char points[32]
 	int precentage = RoundToFloor(float(g_points[client]) / float(g_pointsMaxs) * 100.0)
 	char color[8]
@@ -578,8 +578,6 @@ void SQLAddUser(Database db, DBResultSet results, const char[] error, any data)
 	if(IsClientInGame(client))
 	{
 		char query[512] //https://forums.alliedmods.net/showthread.php?t=261378
-		//char name[MAX_NAME_LENGTH]
-		//GetClientName(client, name, MAX_NAME_LENGTH)
 		int steamid = GetSteamAccountID(client)
 		if(results.FetchRow())
 		{
@@ -606,8 +604,6 @@ void SQLUpdateUsername(Database db, DBResultSet results, const char[] error, any
 	if(IsClientInGame(client))
 	{
 		char query[512]
-		//char name[MAX_NAME_LENGTH]
-		//GetClientName(client, name, MAX_NAME_LENGTH)
 		int steamid = GetSteamAccountID(client)
 		if(results.FetchRow())
 			Format(query, 512, "UPDATE users SET username = '%N', lastjoin = %i WHERE steamid = %i LIMIT 1", client, GetTime(), steamid)
@@ -738,11 +734,11 @@ void Restart(int client, bool posKeep = false)
 					AcceptEntityInput(entity, "StartTouch") //https://github.com/lua9520/source-engine-2018-hl2_src/blob/3bf9df6b2785fa6d951086978a3e66f49427166a/game/shared/cstrike/cs_gamerules.cpp#L849
 					equimpmented = true
 				}
-				char clasname[32]
+				char classname[32]
 				int weapon = GetPlayerWeaponSlot(client, CS_SLOT_SECONDARY)
-				GetEntityClassname(weapon, clasname, 32)
+				GetEntityClassname(weapon, classname, 32)
 				bool defaultpistol
-				if(StrEqual(clasname, "weapon_glock") || StrEqual(clasname, "weapon_usp"))
+				if(StrEqual(classname, "weapon_glock") || StrEqual(classname, "weapon_usp"))
 					defaultpistol = true
 				if(!equimpmented)
 				{
@@ -768,12 +764,12 @@ void Restart(int client, bool posKeep = false)
 						
 						int ammotype = GetEntProp(weapon, Prop_Send, "m_iPrimaryAmmoType")
 						int start = FindSendPropInfo("CBasePlayer", "m_iAmmo")
-						if(StrEqual(clasname, "weapon_glock"))
+						if(StrEqual(classname, "weapon_glock"))
 						{
 							SetEntProp(weapon, Prop_Send, "m_iClip1", 20)
 							SetEntData(client, (start + (ammotype * 4)), 120) //https://forums.alliedmods.net/showpost.php?p=1460194&postcount=3
 						}
-						else if(StrEqual(clasname, "weapon_usp"))
+						else if(StrEqual(classname, "weapon_usp"))
 						{
 							SetEntProp(weapon, Prop_Send, "m_iClip1", 12)
 							SetEntData(client, (start + (ammotype * 4)), 100) //https://forums.alliedmods.net/showpost.php?p=1460194&postcount=3
@@ -1974,7 +1970,7 @@ Action timer_sourcetv(Handle timer)
 	if(sourceTV)
 	{
 		ServerCommand("tv_stoprecord")
-		g_sourceTVchangedFileName = false
+		g_sourceTVchangedFilename = false
 		CreateTimer(5.0, timer_runSourceTV, _, TIMER_FLAG_NO_MAPCHANGE)
 		g_ServerRecord = false
 	}
@@ -1982,11 +1978,11 @@ Action timer_sourcetv(Handle timer)
 
 Action timer_runSourceTV(Handle timer)
 {
-	char fileNameOld[256]
-	Format(fileNameOld, 256, "%s-%s-%s.dem", g_date, g_time, g_map)
-	char fileNameNew[256]
-	Format(fileNameNew, 256, "%s-%s-%s-ServerRecord.dem", g_date, g_time, g_map)
-	RenameFile(fileNameNew, fileNameOld)
+	char filenameOld[256]
+	Format(filenameOld, 256, "%s-%s-%s.dem", g_date, g_time, g_map)
+	char filenameNew[256]
+	Format(filenameNew, 256, "%s-%s-%s-ServerRecord.dem", g_date, g_time, g_map)
+	RenameFile(filenameNew, filenameOld)
 	ConVar sourceTVConVar = FindConVar("tv_enable")
 	bool sourceTV = sourceTVConVar.BoolValue //https://sm.alliedmods.net/new-api/convars/__raw
 	if(sourceTV)
@@ -1995,7 +1991,7 @@ Action timer_runSourceTV(Handle timer)
 		FormatTime(g_date, 64, "%Y-%m-%d", GetTime())
 		FormatTime(g_time, 64, "%H-%M-%S", GetTime())
 		ServerCommand("tv_record %s-%s-%s", g_date, g_time, g_map)
-		g_sourceTVchangedFileName = true
+		g_sourceTVchangedFilename = true
 	}
 }
 
@@ -2351,10 +2347,10 @@ Action timer_motd(Handle timer, int client)
 		ConVar hostname = FindConVar("hostname")
 		char hostnameBuffer[256]
 		hostname.GetString(hostnameBuffer, 256)
-		char urlTop[192]
-		g_urlTop.GetString(urlTop, 192)
-		Format(urlTop, 256, "%s%s", urlTop, g_map)
-		ShowMOTDPanel(client, hostnameBuffer, urlTop, MOTDPANEL_TYPE_URL) //https://forums.alliedmods.net/showthread.php?t=232476
+		char url[192]
+		g_urlTop.GetString(url, 192)
+		Format(url, 256, "%s%s", url, g_map)
+		ShowMOTDPanel(client, hostnameBuffer, url, MOTDPANEL_TYPE_URL) //https://forums.alliedmods.net/showthread.php?t=232476
 	}
 }
 
