@@ -148,6 +148,7 @@ public void OnPluginStart()
 	HookEvent("player_spawn", OnSpawn)
 	HookEvent("player_death", OnDeath)
 	HookEvent("player_jump", OnJump)
+	AddCommandListener(joinclass, "joinclass")
 	LoadTranslations("test.phrases") //https://wiki.alliedmods.net/Translations_(SourceMod_Scripting)
 	g_start = CreateGlobalForward("Bhop_Start", ET_Hook, Param_Cell)
 	g_record = CreateGlobalForward("Bhop_Record", ET_Hook, Param_Cell, Param_Float)
@@ -438,6 +439,17 @@ Action OnJump(Event event, const char[] name, bool dontBroadcast)
 	float vel[3]
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel)
 	g_velJump[client] = SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0))
+}
+
+Action joinclass(int client, const char[] command, int argc)
+{
+	CreateTimer(1.0, timer_respawn, client, TIMER_FLAG_NO_MAPCHANGE)
+}
+
+Action timer_respawn(Handle timer, int client)
+{
+	if(IsClientInGame(client) && !IsPlayerAlive(client))
+		CS_RespawnPlayer(client)
 }
 
 Action cmd_checkpoint(int client, int args)
