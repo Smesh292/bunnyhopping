@@ -278,7 +278,7 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 		gain /= g_tickAir[client]
 		gain *= 100.0
 		gain = RoundToFloor(gain * 100.0 + 0.5) / 100.0
-		if(g_ssj[client])
+		if(g_ssj[client] && velXY >= 400.0)
 			PrintToChat(client, "Speed of sixth jump: %.0f, Strafes: %i, Sync: %.0f%%, Gain: %.0f%%, Flat: %s", velXY, g_strafeCount[client], sync, gain, flat ? "Yes" : "No")
 		for(int i = 1; i <= MaxClients; i++)
 		{
@@ -286,7 +286,7 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 			{
 				int observerTarget = GetEntPropEnt(i, Prop_Data, "m_hObserverTarget")
 				int observerMode = GetEntProp(i, Prop_Data, "m_iObserverMode")
-				if(observerMode < 7 && observerTarget == client && g_ssj[i])
+				if(observerMode < 7 && observerTarget == client && g_ssj[i] && velXY >= 400.0)
 					PrintToChat(i, "Speed of sixth jump: %.0f, Strafes: %i, Sync: %.0f%%, Gain: %.0f%%, Flat: %s", velXY, g_strafeCount[client], sync, gain, flat ? "Yes" : "No")
 			}
 		}
