@@ -1,3 +1,4 @@
+bhop_badges_mini
 bhop_blackrockshooter
 bhop_colorclash
 bhop_conquest2_fix
