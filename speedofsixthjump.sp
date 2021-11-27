@@ -256,9 +256,11 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 void OnJump(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"))
+	g_jumpCount[client]++
+	g_tickcount[client] = 0
+	g_dotTime[client] = GetEngineTime()
 	if(g_jumpCount[client] <= 6)
 		GetClientAbsOrigin(client, g_origin[client][g_jumpCount[client]])
-	g_tickcount[client] = 0
 	if(g_jumpCount[client] == 6)
 	{
 		float vel[3]
@@ -291,6 +293,4 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 			}
 		}
 	}
-	g_jumpCount[client]++
-	g_dotTime[client] = GetEngineTime()
 }
