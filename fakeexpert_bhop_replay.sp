@@ -121,7 +121,9 @@ public void OnMapStart()
 
 Action timer_bot(Handle timer)
 {
-	if(g_database)
+	char record[PLATFORM_MAX_PATH]
+	BuildPath(Path_SM, record, PLATFORM_MAX_PATH, "data/fakeexpert_bhop/%s.replay", g_map)
+	if(FileExists(record))
 	{
 		ConVar cvForce = FindConVar("bot_stop")
 		cvForce.SetInt(1)
