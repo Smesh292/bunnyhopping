@@ -121,7 +121,7 @@ public void OnMapStart()
 
 Action timer_bot(Handle timer)
 {
-	if(g_loaded)
+	if(g_database)
 	{
 		ConVar cvForce = FindConVar("bot_stop")
 		cvForce.SetInt(1)
@@ -168,10 +168,6 @@ Action timer_bot(Handle timer)
 			g_database.Query(SQLGetName, query)
 		}
 	}
-	else
-		for(int i = 1; i <= MaxClients; i++)
-			if(IsClientInGame(i) && !IsClientSourceTV(i) && IsFakeClient(i))
-				ServerCommand("bot_kick %N", i)
 }
 
 void SetupSave(int client, float time)
