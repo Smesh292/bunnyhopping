@@ -35,7 +35,7 @@ bool g_ssj[MAXPLAYERS + 1]
 int g_jumpCount[MAXPLAYERS + 1]
 int g_tickcount[MAXPLAYERS + 1]
 Handle g_cookie
-float g_origin[MAXPLAYERS + 1][7][3]
+float g_groundPos[MAXPLAYERS + 1][7]
 int g_strafeCount[MAXPLAYERS + 1]
 int g_syncTick[MAXPLAYERS + 1]
 int g_tickAir[MAXPLAYERS + 1]
@@ -260,15 +260,75 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 	g_tickcount[client] = 0
 	g_dotTime[client] = GetEngineTime()
 	if(g_jumpCount[client] <= 6)
-		GetClientAbsOrigin(client, g_origin[client][g_jumpCount[client]])
+	{
+		float vecOrigin[3]
+		float vecPos[3]
+		GetClientAbsOrigin(client, vecOrigin)
+		float rayBuffer[4]
+		for(int i = 0; i <= 3; i++)
+		{
+			float doPos[2][3]
+			switch(i)
+			{
+				case 0:
+				{
+					doPos[0][0] = vecOrigin[0] + 16.0
+					doPos[0][1] = vecOrigin[1] - 16.0
+					doPos[0][2] = vecOrigin[2]
+					doPos[1][0] = vecOrigin[0] + 16.0
+					doPos[1][1] = vecOrigin[1] - 16.0
+					doPos[1][2] = vecOrigin[2] - 90.0
+				}
+				case 1:
+				{
+					doPos[0][0] = vecOrigin[0] + 16.0
+					doPos[0][1] = vecOrigin[1] + 16.0
+					doPos[0][2] = vecOrigin[2]
+					doPos[1][0] = vecOrigin[0] + 16.0
+					doPos[1][1] = vecOrigin[1] + 16.0
+					doPos[1][2] = vecOrigin[2] - 90.0
+				}
+				case 2:
+				{
+					doPos[0][0] = vecOrigin[0] - 16.0
+					doPos[0][1] = vecOrigin[1] + 16.0
+					doPos[0][2] = vecOrigin[2]
+					doPos[1][0] = vecOrigin[0] - 16.0
+					doPos[1][1] = vecOrigin[1] + 16.0
+					doPos[1][2] = vecOrigin[2] - 90.0
+				}
+				case 3:
+				{
+					doPos[0][0] = vecOrigin[0] - 16.0
+					doPos[0][1] = vecOrigin[1] - 16.0
+					doPos[0][2] = vecOrigin[2]
+					doPos[1][0] = vecOrigin[0] - 16.0
+					doPos[1][1] = vecOrigin[1] - 16.0
+					doPos[1][2] = vecOrigin[2] - 90.0
+				}
+			}
+			Handle trace = TR_TraceRayFilterEx(doPos[0], doPos[1], MASK_PLAYERSOLID, RayType_EndPoint, TraceEntityFilterPlayer, client)
+			if(TR_DidHit(trace))
+			{
+				TR_GetEndPosition(vecPos, trace)
+				rayBuffer[i] = vecPos[2]
+			}
+			delete trace
+		}
+		float groundPos
+		for(int i = 0; i <= 3; i++)
+			if(FloatAbs(groundPos) < FloatAbs(rayBuffer[i]))
+				groundPos = rayBuffer[i]
+		g_groundPos[client][g_jumpCount[client]] = groundPos
+	}
 	if(g_jumpCount[client] == 6)
 	{
 		float vel[3]
 		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel)
 		float velXY = SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0))
 		bool flat
-		float result = g_origin[client][1][2] - g_origin[client][0][2] + g_origin[client][2][2] - g_origin[client][0][2] + g_origin[client][3][2] - g_origin[client][0][2] + g_origin[client][4][2] - g_origin[client][0][2] + g_origin[client][5][2] - g_origin[client][0][2] + g_origin[client][6][2] - g_origin[client][0][2]
-		if(RoundFloat(result) - 6 == 0)
+		float result = g_groundPos[client][2] - g_groundPos[client][1] + g_groundPos[client][3] - g_groundPos[client][1] + g_groundPos[client][4] - g_groundPos[client][1] + g_groundPos[client][5] - g_groundPos[client][1] + g_groundPos[client][6] - g_groundPos[client][1]
+		if(!result)
 			flat = true
 		float sync = -1.0
 		sync += float(g_syncTick[client])
@@ -293,4 +353,11 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 			}
 		}
 	}
+}
+
+bool TraceEntityFilterPlayer(int entity, int contentsMask, any data)
+{
+	if(entity == data)
+		return false
+	return true
 }
