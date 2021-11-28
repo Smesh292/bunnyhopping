@@ -307,7 +307,7 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 					doPos[1][2] = vecOrigin[2] - 90.0
 				}
 			}
-			Handle trace = TR_TraceRayFilterEx(doPos[0], doPos[1], MASK_PLAYERSOLID, RayType_EndPoint, TraceEntityFilterPlayer, client)
+			Handle trace = TR_TraceRayFilterEx(doPos[0], doPos[1], MASK_PLAYERSOLID, RayType_EndPoint, TraceEntityFilterPlayer, client) //https://forums.alliedmods.net/showpost.php?p=1042515&postcount=4
 			if(TR_DidHit(trace))
 			{
 				TR_GetEndPosition(vecPos, trace)
