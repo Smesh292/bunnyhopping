@@ -163,7 +163,7 @@ Action timer_bot(Handle timer)
 				}
 			}
 		}
-		if(replayRunning)
+		if(replayRunning && g_database)
 		{
 			char query[512]
 			Format(query, 512, "SELECT username FROM users WHERE steamid = %i LIMIT 1", g_steamid3)
@@ -251,9 +251,12 @@ void LoadRecord()
 				g_frameCache.SetArray(i, data, sizeof(eFrame))
 		delete f
 		g_tick[0] = 0
-		char query[512]
-		Format(query, 512, "SELECT username FROM users WHERE steamid = %i", g_steamid3)
-		g_database.Query(SQLGetName, query)
+		if(g_database)
+		{
+			char query[512]
+			Format(query, 512, "SELECT username FROM users WHERE steamid = %i", g_steamid3)
+			g_database.Query(SQLGetName, query)
+		}
 		g_loaded = true
 	}
 }
