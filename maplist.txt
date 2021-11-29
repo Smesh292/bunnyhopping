@@ -2,6 +2,7 @@ bhop_badges_mini
 bhop_blackrockshooter
 bhop_colorclash
 bhop_conquest2_fix
+bhop_cyanglow
 bhop_danmark
 bhop_eazy_v2
 bhop_japan
