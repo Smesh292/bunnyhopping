@@ -2485,17 +2485,17 @@ void Devmap(bool force = false)
 		if((g_devmapCount[1] || g_devmapCount[0]) && g_devmapCount[1] >= g_devmapCount[0])
 		{
 			if(g_devmap)
-				PrintToChatAll("Devmap will be disabled. \"Yes\" %i%%% or %i of %i players.", (g_devmapCount[1] / g_devmapCount[0] + g_devmapCount[1]) * 100, g_devmapCount[1], g_devmapCount[0] + g_devmapCount[1])
+				PrintToChatAll("Devmap will be disabled. \"Yes\" %i%%% or %i of %i players.", (g_devmapCount[1] / (g_devmapCount[0] + g_devmapCount[1])) * 100, g_devmapCount[1], g_devmapCount[0] + g_devmapCount[1])
 			else
-				PrintToChatAll("Devmap will be enabled. \"Yes\" %i%%% or %i of %i players.", (g_devmapCount[1] / g_devmapCount[0] + g_devmapCount[1]) * 100, g_devmapCount[1], g_devmapCount[0] + g_devmapCount[1])
+				PrintToChatAll("Devmap will be enabled. \"Yes\" %i%%% or %i of %i players.", (g_devmapCount[1] / (g_devmapCount[0] + g_devmapCount[1])) * 100, g_devmapCount[1], g_devmapCount[0] + g_devmapCount[1])
 			CreateTimer(5.0, timer_changelevel, g_devmap ? false : true)
 		}
 		else if((g_devmapCount[1] || g_devmapCount[0]) && g_devmapCount[1] <= g_devmapCount[0])
 		{
 			if(g_devmap)
-				PrintToChatAll("Devmap will be continue. \"No\" chose %i%%% or %i of %i players.", (g_devmapCount[0] / g_devmapCount[0] + g_devmapCount[1]) * 100, g_devmapCount[0], g_devmapCount[0] + g_devmapCount[1]) //google translate russian to english.
+				PrintToChatAll("Devmap will be continue. \"No\" chose %i%%% or %i of %i players.", (g_devmapCount[0] / (g_devmapCount[0] + g_devmapCount[1])) * 100, g_devmapCount[0], g_devmapCount[0] + g_devmapCount[1]) //google translate russian to english.
 			else
-				PrintToChatAll("Devmap will not be enabled. \"No\" chose %i%%% or %i of %i players.", (g_devmapCount[0] / g_devmapCount[0] + g_devmapCount[1]) * 100, g_devmapCount[0], g_devmapCount[0] + g_devmapCount[1])
+				PrintToChatAll("Devmap will not be enabled. \"No\" chose %i%%% or %i of %i players.", (g_devmapCount[0] / (g_devmapCount[0] + g_devmapCount[1])) * 100, g_devmapCount[0], g_devmapCount[0] + g_devmapCount[1])
 		}
 		for(int i = 0; i <= 1; i++)
 			g_devmapCount[i] = 0
