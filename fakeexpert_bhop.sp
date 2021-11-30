@@ -213,76 +213,111 @@ void RecalculatePoints()
 
 void SQLRecalculatePoints_GetMap(Database db, DBResultSet results, const char[] error, any data)
 {
-	while(results.FetchRow())
+	if(strlen(error))
+		PrintToServer("SQLRecalculatePoints_GetMap: %s", error)
+	else
 	{
-		char map[192]
-		results.FetchString(0, map, 192)
-		char query[512]
-		Format(query, 512, "SELECT (SELECT COUNT(*) FROM records WHERE map = '%s'), (SELECT tier FROM tier WHERE map = '%s'), id FROM records WHERE map = '%s' ORDER BY time", map, map, map) //https://stackoverflow.com/questions/38104018/select-and-count-rows-in-the-same-query
-		g_mysql.Query(SQLRecalculatePoints, query)
+		while(results.FetchRow())
+		{
+			char map[192]
+			results.FetchString(0, map, 192)
+			char query[512]
+			Format(query, 512, "SELECT (SELECT COUNT(*) FROM records WHERE map = '%s'), (SELECT tier FROM tier WHERE map = '%s'), id FROM records WHERE map = '%s' ORDER BY time", map, map, map) //https://stackoverflow.com/questions/38104018/select-and-count-rows-in-the-same-query
+			g_mysql.Query(SQLRecalculatePoints, query)
+		}
 	}
 }
 
 void SQLRecalculatePoints(Database db, DBResultSet results, const char[] error, any data)
 {
-	int place
-	char query[512]
-	while(results.FetchRow())
+	if(strlen(error))
+		PrintToServer("SQLRecalculatePoints: %s", error)
+	else
 	{
-		int points = results.FetchInt(1) * results.FetchInt(0) / ++place //thanks to DeadSurfer
-		Format(query, 512, "UPDATE records SET points = %i WHERE id = %i LIMIT 1", points, results.FetchInt(2))
-		g_queryLast++
-		g_mysql.Query(SQLRecalculatePoints2, query)
+		int place
+		char query[512]
+		while(results.FetchRow())
+		{
+			int points = results.FetchInt(1) * results.FetchInt(0) / ++place //thanks to DeadSurfer
+			Format(query, 512, "UPDATE records SET points = %i WHERE id = %i LIMIT 1", points, results.FetchInt(2))
+			g_queryLast++
+			g_mysql.Query(SQLRecalculatePoints2, query)
+		}
 	}
 }
 
 void SQLRecalculatePoints2(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(g_queryLast-- && !g_queryLast)
-		g_mysql.Query(SQLRecalculatePoints3, "SELECT steamid FROM users")
+	if(strlen(error))
+		PrintToServer("SQLRecalculatePoints2: %s", error)
+	else
+	{
+		if(g_queryLast-- && !g_queryLast)
+			g_mysql.Query(SQLRecalculatePoints3, "SELECT steamid FROM users")
+	}
 }
 
 void SQLRecalculatePoints3(Database db, DBResultSet results, const char[] error, any data)
 {
-	while(results.FetchRow())
+	if(strlen(error))
+		PrintToServer("SQLRecalculatePoints3: %s", error)
+	else
 	{
-		char query[512]
-		Format(query, 512, "SELECT MAX(points) FROM records WHERE playerid = %i GROUP BY map", results.FetchInt(0))
-		g_mysql.Query(SQLRecalculateUserPoints, query, results.FetchInt(0))
+		while(results.FetchRow())
+		{
+			char query[512]
+			Format(query, 512, "SELECT MAX(points) FROM records WHERE playerid = %i GROUP BY map", results.FetchInt(0))
+			g_mysql.Query(SQLRecalculateUserPoints, query, results.FetchInt(0))
+		}
 	}
 }
 
 void SQLRecalculateUserPoints(Database db, DBResultSet results, const char[] error, any data)
 {
-	int points
-	while(results.FetchRow())
-		points += results.FetchInt(0)
-	char query[512]
-	Format(query, 512, "UPDATE users SET points = %i WHERE steamid = %i LIMIT 1", points, data)
-	g_queryLast++
-	g_mysql.Query(SQLUpdateUserPoints, query)
+	if(strlen(error))
+		PrintToServer("SQLRecalculateUserPoints: %s", error)
+	else
+	{
+		int points
+		while(results.FetchRow())
+			points += results.FetchInt(0)
+		char query[512]
+		Format(query, 512, "UPDATE users SET points = %i WHERE steamid = %i LIMIT 1", points, data)
+		g_queryLast++
+		g_mysql.Query(SQLUpdateUserPoints, query)
+	}
 }
 
 void SQLUpdateUserPoints(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.HasResults == false)
-		if(g_queryLast-- && !g_queryLast)
-			g_mysql.Query(SQLGetPointsMaxs, "SELECT points FROM users ORDER BY points DESC LIMIT 1")
+	if(strlen(error))
+		PrintToServer("SQLUpdateUserPoints: %s", error)
+	else
+	{
+		if(results.HasResults == false)
+			if(g_queryLast-- && !g_queryLast)
+				g_mysql.Query(SQLGetPointsMaxs, "SELECT points FROM users ORDER BY points DESC LIMIT 1")
+	}
 }
 
 void SQLGetPointsMaxs(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.FetchRow())
+	if(strlen(error))
+		PrintToServer("SQLGetPointsMaxs: %s", error)
+	else
 	{
-		g_pointsMaxs = results.FetchInt(0)
-		char query[512]
-		for(int i = 1; i <= MaxClients; i++)
+		if(results.FetchRow())
 		{
-			if(IsClientInGame(i) && !IsFakeClient(i))
+			g_pointsMaxs = results.FetchInt(0)
+			char query[512]
+			for(int i = 1; i <= MaxClients; i++)
 			{
-				int steamid = GetSteamAccountID(i)
-				Format(query, 512, "SELECT points FROM users WHERE steamid = %i LIMIT 1", steamid)
-				g_mysql.Query(SQLGetPoints, query, GetClientSerial(i))
+				if(IsClientInGame(i) && !IsFakeClient(i))
+				{
+					int steamid = GetSteamAccountID(i)
+					Format(query, 512, "SELECT points FROM users WHERE steamid = %i LIMIT 1", steamid)
+					g_mysql.Query(SQLGetPoints, query, GetClientSerial(i))
+				}
 			}
 		}
 	}
@@ -572,88 +607,120 @@ public void OnClientDisconnect(int client)
 
 void SQLAddUser(Database db, DBResultSet results, const char[] error, any data)
 {
-	int client = GetClientFromSerial(data)
-	if(!client)
-		return
-	if(IsClientInGame(client))
+	if(strlen(error))
+		PrintToServer("SQLAddUser: %s", error)
+	else
 	{
-		char query[512] //https://forums.alliedmods.net/showthread.php?t=261378
-		int steamid = GetSteamAccountID(client)
-		if(results.FetchRow())
+		int client = GetClientFromSerial(data)
+		if(!client)
+			return
+		if(IsClientInGame(client))
 		{
-			Format(query, 512, "SELECT steamid FROM users WHERE steamid = %i LIMIT 1", steamid)
-			g_mysql.Query(SQLUpdateUsername, query, GetClientSerial(client), DBPrio_High)
-		}
-		else
-		{
-			Format(query, 512, "INSERT INTO users (username, steamid, firstjoin, lastjoin) VALUES ('%N', %i, %i, %i)", client, steamid, GetTime(), GetTime())
-			g_mysql.Query(SQLUserAdded, query)
+			char query[512] //https://forums.alliedmods.net/showthread.php?t=261378
+			int steamid = GetSteamAccountID(client)
+			if(results.FetchRow())
+			{
+				Format(query, 512, "SELECT steamid FROM users WHERE steamid = %i LIMIT 1", steamid)
+				g_mysql.Query(SQLUpdateUsername, query, GetClientSerial(client), DBPrio_High)
+			}
+			else
+			{
+				Format(query, 512, "INSERT INTO users (username, steamid, firstjoin, lastjoin) VALUES ('%N', %i, %i, %i)", client, steamid, GetTime(), GetTime())
+				g_mysql.Query(SQLUserAdded, query)
+			}
 		}
 	}
 }
 
 void SQLUserAdded(Database db, DBResultSet results, const char[] error, any data)
 {
+	if(strlen(error))
+		PrintToServer("SQLUserAdded: %s", error)
 }
 
 void SQLUpdateUsername(Database db, DBResultSet results, const char[] error, any data)
 {
-	int client = GetClientFromSerial(data)
-	if(!client)
-		return
-	if(IsClientInGame(client))
+	if(strlen(error))
+		PrintToServer("SQLUpdateUsername: %s", error)
+	else
 	{
-		char query[512]
-		int steamid = GetSteamAccountID(client)
-		if(results.FetchRow())
-			Format(query, 512, "UPDATE users SET username = '%N', lastjoin = %i WHERE steamid = %i LIMIT 1", client, GetTime(), steamid)
-		else
-			Format(query, 512, "INSERT INTO users (username, steamid, firstjoin, lastjoin) VALUES ('%N', %i, %i, %i)", client, steamid, GetTime(), GetTime())
-		g_mysql.Query(SQLUpdateUsernameSuccess, query, GetClientSerial(client), DBPrio_High)
+		int client = GetClientFromSerial(data)
+		if(!client)
+			return
+		if(IsClientInGame(client))
+		{
+			char query[512]
+			int steamid = GetSteamAccountID(client)
+			if(results.FetchRow())
+				Format(query, 512, "UPDATE users SET username = '%N', lastjoin = %i WHERE steamid = %i LIMIT 1", client, GetTime(), steamid)
+			else
+				Format(query, 512, "INSERT INTO users (username, steamid, firstjoin, lastjoin) VALUES ('%N', %i, %i, %i)", client, steamid, GetTime(), GetTime())
+			g_mysql.Query(SQLUpdateUsernameSuccess, query, GetClientSerial(client), DBPrio_High)
+		}
 	}
 }
 
 void SQLUpdateUsernameSuccess(Database db, DBResultSet results, const char[] error, any data)
 {
-	int client = GetClientFromSerial(data)
-	if(!client)
-		return
-	if(IsClientInGame(client))
+	if(strlen(error))
+		PrintToServer("SQLUpdateUsernameSuccess: %s", error)
+	else
 	{
-		if(results.HasResults == false)
+		int client = GetClientFromSerial(data)
+		if(!client)
+			return
+		if(IsClientInGame(client))
 		{
-			char query[512]
-			int steamid = GetSteamAccountID(client)
-			Format(query, 512, "SELECT points FROM users WHERE steamid = %i LIMIT 1", steamid)
-			g_mysql.Query(SQLGetPoints, query, GetClientSerial(client), DBPrio_High)
+			if(results.HasResults == false)
+			{
+				char query[512]
+				int steamid = GetSteamAccountID(client)
+				Format(query, 512, "SELECT points FROM users WHERE steamid = %i LIMIT 1", steamid)
+				g_mysql.Query(SQLGetPoints, query, GetClientSerial(client), DBPrio_High)
+			}
 		}
 	}
 }
 
 void SQLGetPoints(Database db, DBResultSet results, const char[] error, any data)
 {
-	int client = GetClientFromSerial(data)
-	if(!client)
-		return
-	if(results.FetchRow())
-		g_points[client] = results.FetchInt(0)
+	if(strlen(error))
+		PrintToServer("SQLGetPoints: %s", error)
+	else
+	{
+		int client = GetClientFromSerial(data)
+		if(!client)
+			return
+		if(results.FetchRow())
+			g_points[client] = results.FetchInt(0)
+	}
 }
 
 void SQLGetServerRecord(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.FetchRow())
-		g_ServerRecordTime = results.FetchFloat(0)
+	if(strlen(error))
+		PrintToServer("SQLGetServerRecord: %s", error)
 	else
-		g_ServerRecordTime = 0.0
+	{
+		if(results.FetchRow())
+			g_ServerRecordTime = results.FetchFloat(0)
+		else
+			g_ServerRecordTime = 0.0
+	}
 }
 
 void SQLGetPersonalRecord(Database db, DBResultSet results, const char[] error, any data)
 {
-	int client = GetClientFromSerial(data)
-	if(results.FetchRow())
-		g_recordHave[client] = results.FetchFloat(0)
+	if(strlen(error))
+		PrintToServer("SQLGetPersonalRecord: %s", error)
 	else
-		g_recordHave[client] = 0.0
+	{
+		int client = GetClientFromSerial(data)
+		if(results.FetchRow())
+			g_recordHave[client] = results.FetchFloat(0)
+		else
+			g_recordHave[client] = 0.0
+	}
 }
 
 Action cmd_bhop(int client, int args)
@@ -905,9 +972,14 @@ Action cmd_startmins(int client, int args)
 
 void SQLDeleteStartZone(Database db, DBResultSet results, const char[] error, any data)
 {
-	char query[512]
-	Format(query, 512, "INSERT INTO zones (map, type, possition_x, possition_y, possition_z, possition_x2, possition_y2, possition_z2) VALUES ('%s', 0, %i, %i, %i, %i, %i, %i)", g_map, RoundFloat(g_zoneStartOrigin[0][0]), RoundFloat(g_zoneStartOrigin[0][1]), RoundFloat(g_zoneStartOrigin[0][2]), RoundFloat(g_zoneStartOrigin[1][0]), RoundFloat(g_zoneStartOrigin[1][1]), RoundFloat(g_zoneStartOrigin[1][2]))
-	g_mysql.Query(SQLSetStartZones, query)
+	if(strlen(error))
+		PrintToServer("SQLDeleteStartZone: %s", error)
+	else
+	{
+		char query[512]
+		Format(query, 512, "INSERT INTO zones (map, type, possition_x, possition_y, possition_z, possition_x2, possition_y2, possition_z2) VALUES ('%s', 0, %i, %i, %i, %i, %i, %i)", g_map, RoundFloat(g_zoneStartOrigin[0][0]), RoundFloat(g_zoneStartOrigin[0][1]), RoundFloat(g_zoneStartOrigin[0][2]), RoundFloat(g_zoneStartOrigin[1][0]), RoundFloat(g_zoneStartOrigin[1][1]), RoundFloat(g_zoneStartOrigin[1][2]))
+		g_mysql.Query(SQLSetStartZones, query)
+	}
 }
 
 Action cmd_deleteallcp(int client, int args)
@@ -933,10 +1005,15 @@ Action cmd_deleteallcp(int client, int args)
 
 void SQLDeleteAllCP(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.HasResults == false)
-		PrintToServer("All checkpoints are deleted on current map.")
+	if(strlen(error))
+		PrintToServer("SQLDeleteAllCP: %s", error)
 	else
-		PrintToServer("No checkpoints to delete on current map.")
+	{
+		if(results.HasResults == false)
+			PrintToServer("All checkpoints are deleted on current map.")
+		else
+			PrintToServer("No checkpoints to delete on current map.")
+	}
 }
 
 public Action OnClientCommandKeyValues(int client, KeyValues kv)
@@ -1029,9 +1106,14 @@ Action cmd_endmins(int client, int args)
 
 void SQLDeleteEndZone(Database db, DBResultSet results, const char[] error, any data)
 {
-	char query[512]
-	Format(query, 512, "INSERT INTO zones (map, type, possition_x, possition_y, possition_z, possition_x2, possition_y2, possition_z2) VALUES ('%s', 1, %i, %i, %i, %i, %i, %i)", g_map, RoundFloat(g_zoneEndOrigin[0][0]), RoundFloat(g_zoneEndOrigin[0][1]), RoundFloat(g_zoneEndOrigin[0][2]), RoundFloat(g_zoneEndOrigin[1][0]), RoundFloat(g_zoneEndOrigin[1][1]), RoundFloat(g_zoneEndOrigin[1][2]))
-	g_mysql.Query(SQLSetEndZones, query)
+	if(strlen(error))
+		PrintToServer("SQLDeleteEndZone: %s", error)
+	else
+	{
+		char query[512]
+		Format(query, 512, "INSERT INTO zones (map, type, possition_x, possition_y, possition_z, possition_x2, possition_y2, possition_z2) VALUES ('%s', 1, %i, %i, %i, %i, %i, %i)", g_map, RoundFloat(g_zoneEndOrigin[0][0]), RoundFloat(g_zoneEndOrigin[0][1]), RoundFloat(g_zoneEndOrigin[0][2]), RoundFloat(g_zoneEndOrigin[1][0]), RoundFloat(g_zoneEndOrigin[1][1]), RoundFloat(g_zoneEndOrigin[1][2]))
+		g_mysql.Query(SQLSetEndZones, query)
+	}
 }
 
 Action cmd_maptier(int client, int args)
@@ -1064,27 +1146,47 @@ Action cmd_maptier(int client, int args)
 
 void SQLTierRemove(Database db, DBResultSet results, const char[] error, any data)
 {
-	char query[512]
-	Format(query, 512, "INSERT INTO tier (tier, map) VALUES (%i, '%s')", data, g_map)
-	g_mysql.Query(SQLTierInsert, query, data)
+	if(strlen(error))
+		PrintToServer("SQLTierRemove: %s", error)
+	else
+	{
+		char query[512]
+		Format(query, 512, "INSERT INTO tier (tier, map) VALUES (%i, '%s')", data, g_map)
+		g_mysql.Query(SQLTierInsert, query, data)
+	}
 }
 
 void SQLTierInsert(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.HasResults == false)
-		PrintToServer("Tier %i is set for %s.", data, g_map)
+	if(strlen(error))
+		PrintToServer("SQLTierInsert: %s", error)
+	else
+	{
+		if(results.HasResults == false)
+			PrintToServer("Tier %i is set for %s.", data, g_map)
+	}
 }
 
 void SQLSetStartZones(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.HasResults == false)
-		PrintToServer("Start zone successfuly created.")
+	if(strlen(error))
+		PrintToServer("SQLSetStartZones: %s", error)
+	else
+	{
+		if(results.HasResults == false)
+			PrintToServer("Start zone successfuly created.")
+	}
 }
 
 void SQLSetEndZones(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.HasResults == false)
-		PrintToServer("End zone successfuly created.")
+	if(strlen(error))
+		PrintToServer("SQLSetEndZones: %s", error)
+	else
+	{
+		if(results.HasResults == false)
+			PrintToServer("End zone successfuly created.")
+	}
 }
 
 Action cmd_startmaxs(int client, int args)
@@ -1152,11 +1254,16 @@ Action cmd_cpmins(int client, int args)
 
 void SQLCPRemoved(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.HasResults == false)
-		PrintToServer("Checkpoint zone no. %i successfuly deleted.", data)
-	char query[512]
-	Format(query, 512, "INSERT INTO cp (cpnum, cpx, cpy, cpz, cpx2, cpy2, cpz2, map) VALUES (%i, %i, %i, %i, %i, %i, %i, '%s')", data, RoundFloat(g_cpPos[0][data][0]), RoundFloat(g_cpPos[0][data][1]), RoundFloat(g_cpPos[0][data][2]), RoundFloat(g_cpPos[1][data][0]), RoundFloat(g_cpPos[1][data][1]), RoundFloat(g_cpPos[1][data][2]), g_map)
-	g_mysql.Query(SQLCPInserted, query, data)
+	if(strlen(error))
+		PrintToServer("SQLCPRemoved: %s", error)
+	else
+	{
+		if(results.HasResults == false)
+			PrintToServer("Checkpoint zone no. %i successfuly deleted.", data)
+		char query[512]
+		Format(query, 512, "INSERT INTO cp (cpnum, cpx, cpy, cpz, cpx2, cpy2, cpz2, map) VALUES (%i, %i, %i, %i, %i, %i, %i, '%s')", data, RoundFloat(g_cpPos[0][data][0]), RoundFloat(g_cpPos[0][data][1]), RoundFloat(g_cpPos[0][data][2]), RoundFloat(g_cpPos[1][data][0]), RoundFloat(g_cpPos[1][data][1]), RoundFloat(g_cpPos[1][data][2]), g_map)
+		g_mysql.Query(SQLCPInserted, query, data)
+	}
 }
 
 Action cmd_cpmaxs(int client, int args)
@@ -1185,8 +1292,13 @@ Action cmd_cpmaxs(int client, int args)
 
 void SQLCPInserted(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.HasResults == false)
-		PrintToServer("Checkpoint zone no. %i successfuly created.", data)
+	if(strlen(error))
+		PrintToServer("SQLCPInserted: %s", error)
+	else
+	{
+		if(results.HasResults == false)
+			PrintToServer("Checkpoint zone no. %i successfuly created.", data)
+	}
 }
 
 Action cmd_zones(int client, int args)
@@ -1422,14 +1534,19 @@ int zones2_handler(Menu menu, MenuAction action, int param1, int param2)
 
 void SQLUpdateZone(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.HasResults == false)
+	if(strlen(error))
+		PrintToServer("SQLUpdateZone: %s", error)
+	else
 	{
-		if(data == 1)
-			PrintToServer("End zone successfuly updated.")
-		else if(!data)
-			PrintToServer("Start zone successfuly updated.")
-		else if(data > 1)
-			PrintToServer("CP zone nr. %i successfuly updated.", data - 1)
+		if(results.HasResults == false)
+		{
+			if(data == 1)
+				PrintToServer("End zone successfuly updated.")
+			else if(!data)
+				PrintToServer("Start zone successfuly updated.")
+			else if(data > 1)
+				PrintToServer("CP zone nr. %i successfuly updated.", data - 1)
+		}
 	}
 }
 
@@ -1442,7 +1559,12 @@ Action cmd_createcp(int args)
 
 void SQLCreateCPTable(Database db, DBResultSet results, const char[] error, any data)
 {
-	PrintToServer("CP table successfuly created.")
+	if(strlen(error))
+		PrintToServer("SQLCreateCPTable: %s", error)
+	else
+	{
+		PrintToServer("CP table successfuly created.")
+	}
 }
 
 Action cmd_createtier(int args)
@@ -1452,7 +1574,12 @@ Action cmd_createtier(int args)
 
 void SQLCreateTierTable(Database db, DBResultSet results, const char[] error, any data)
 {
-	PrintToServer("Tier table successfuly created.")
+	if(strlen(error))
+		PrintToServer("SQLCreateTierTable: %s", error)
+	else
+	{
+		PrintToServer("Tier table successfuly created.")
+	}
 }
 
 void CPSetup(int client)
@@ -1471,31 +1598,36 @@ void CPSetup(int client)
 
 void SQLCPSetup(Database db, DBResultSet results, const char[] error, DataPack dp)
 {
-	dp.Reset()
-	int client = GetClientFromSerial(dp.ReadCell())
-	int cp = dp.ReadCell()
-	if(results.FetchRow())
+	if(strlen(error))
+		PrintToServer("SQLCPSetup: %s", error)
+	else
 	{
-		g_cpPos[0][cp][0] = results.FetchFloat(0)
-		g_cpPos[0][cp][1] = results.FetchFloat(1)
-		g_cpPos[0][cp][2] = results.FetchFloat(2)
-		g_cpPos[1][cp][0] = results.FetchFloat(3)
-		g_cpPos[1][cp][1] = results.FetchFloat(4)
-		g_cpPos[1][cp][2] = results.FetchFloat(5)
-		if(!g_devmap)
-			createcp(cp)
-		g_cpCount++
-	}
-	if(cp == 10)
-	{
-		if(client)
-			ZoneEditor2(client)
-		if(!g_zoneHave[2])
-			g_zoneHave[2] = true
-		if(!g_devmap)
-			for(int i = 1; i <= MaxClients; i++)
-				if(IsClientInGame(i))
-					OnClientPutInServer(i)
+		dp.Reset()
+		int client = GetClientFromSerial(dp.ReadCell())
+		int cp = dp.ReadCell()
+		if(results.FetchRow())
+		{
+			g_cpPos[0][cp][0] = results.FetchFloat(0)
+			g_cpPos[0][cp][1] = results.FetchFloat(1)
+			g_cpPos[0][cp][2] = results.FetchFloat(2)
+			g_cpPos[1][cp][0] = results.FetchFloat(3)
+			g_cpPos[1][cp][1] = results.FetchFloat(4)
+			g_cpPos[1][cp][2] = results.FetchFloat(5)
+			if(!g_devmap)
+				createcp(cp)
+			g_cpCount++
+		}
+		if(cp == 10)
+		{
+			if(client)
+				ZoneEditor2(client)
+			if(!g_zoneHave[2])
+				g_zoneHave[2] = true
+			if(!g_devmap)
+				for(int i = 1; i <= MaxClients; i++)
+					if(IsClientInGame(i))
+						OnClientPutInServer(i)
+		}
 	}
 }
 
@@ -1540,7 +1672,12 @@ Action cmd_createusers(int args)
 
 void SQLCreateUserTable(Database db, DBResultSet results, const char[] error, any data)
 {
-	PrintToServer("Successfuly created user table.")
+	if(strlen(error))
+		PrintToServer("SQLCreateUserTable: %s", error)
+	else
+	{
+		PrintToServer("Successfuly created user table.")
+	}
 }
 
 Action cmd_createrecords(int args)
@@ -1550,7 +1687,12 @@ Action cmd_createrecords(int args)
 
 void SQLRecordsTable(Database db, DBResultSet results, const char[] error, any data)
 {
-	PrintToServer("Successfuly created records table.")
+	if(strlen(error))
+		PrintToServer("SQLRecordsTable: %s", error)
+	else
+	{
+		PrintToServer("Successfuly created records table.")
+	}
 }
 
 Action SDKEndTouch(int entity, int other)
@@ -1958,10 +2100,14 @@ void FinishMSG(int client, bool firstServerRecord, bool serverRecord, bool cpOnl
 
 void SQLUpdateRecord(Database db, DBResultSet results, const char[] error, DataPack dp)
 {
+	if(strlen(error))
+		PrintToServer("SQLUpdateRecord: %s", error)
 }
 
 void SQLInsertRecord(Database db, DBResultSet results, const char[] error, any data)
 {
+	if(strlen(error))
+		PrintToServer("SQLInsertRecord: %s", error)
 }
 
 Action timer_sourcetv(Handle timer)
@@ -1998,61 +2144,73 @@ Action timer_runSourceTV(Handle timer)
 
 void SQLCPSelect(Database db, DBResultSet results, const char[] error, DataPack data)
 {
-	data.Reset()
-	int other = GetClientFromSerial(data.ReadCell())
-	int cpnum = data.ReadCell()
-	char query[512]
-	if(results.FetchRow())
-	{
-		Format(query, 512, "SELECT cp%i FROM records WHERE map = '%s' ORDER BY time LIMIT 1", cpnum, g_map) //log help me alot with this stuff
-		DataPack dp = new DataPack()
-		dp.WriteCell(GetClientSerial(other))
-		dp.WriteCell(cpnum)
-		g_mysql.Query(SQLCPSelect2, query, dp)
-	}
+	if(strlen(error))
+		PrintToServer("SQLCPSelect: %s", error)
 	else
 	{
-		int personalHour = (RoundToFloor(g_timerTime[other]) / 3600) % 24
-		int personalMinute = (RoundToFloor(g_timerTime[other]) / 60) % 60
-		int personalSecond = RoundToFloor(g_timerTime[other]) % 60
-		FinishMSG(other, false, false, true, true, false, cpnum, personalHour, personalMinute, personalSecond)
+		data.Reset()
+		int other = GetClientFromSerial(data.ReadCell())
+		int cpnum = data.ReadCell()
+		char query[512]
+		if(results.FetchRow())
+		{
+			Format(query, 512, "SELECT cp%i FROM records WHERE map = '%s' ORDER BY time LIMIT 1", cpnum, g_map) //log help me alot with this stuff
+			DataPack dp = new DataPack()
+			dp.WriteCell(GetClientSerial(other))
+			dp.WriteCell(cpnum)
+			g_mysql.Query(SQLCPSelect2, query, dp)
+		}
+		else
+		{
+			int personalHour = (RoundToFloor(g_timerTime[other]) / 3600) % 24
+			int personalMinute = (RoundToFloor(g_timerTime[other]) / 60) % 60
+			int personalSecond = RoundToFloor(g_timerTime[other]) % 60
+			FinishMSG(other, false, false, true, true, false, cpnum, personalHour, personalMinute, personalSecond)
+		}
 	}
 }
 
 void SQLCPSelect2(Database db, DBResultSet results, const char[] error, DataPack data)
 {
-	data.Reset()
-	int other = GetClientFromSerial(data.ReadCell())
-	int cpnum = data.ReadCell()
-	int personalHour = (RoundToFloor(g_timerTime[other]) / 3600) % 24
-	int personalMinute = (RoundToFloor(g_timerTime[other]) / 60) % 60
-	int personalSecond = RoundToFloor(g_timerTime[other]) % 60
-	if(results.FetchRow())
+	if(strlen(error))
+		PrintToServer("SQLCPSelect2: %s", error)
+	else
 	{
-		g_cpTime[cpnum] = results.FetchFloat(0)
-		if(g_cpTimeClient[cpnum][other] < g_cpTime[cpnum])
+		data.Reset()
+		int other = GetClientFromSerial(data.ReadCell())
+		int cpnum = data.ReadCell()
+		int personalHour = (RoundToFloor(g_timerTime[other]) / 3600) % 24
+		int personalMinute = (RoundToFloor(g_timerTime[other]) / 60) % 60
+		int personalSecond = RoundToFloor(g_timerTime[other]) % 60
+		if(results.FetchRow())
 		{
-			g_cpDiff[cpnum][other] = g_cpTime[cpnum] - g_cpTimeClient[cpnum][other]
-			int srCPHour = (RoundToFloor(g_cpDiff[cpnum][other]) / 3600) % 24
-			int srCPMinute = (RoundToFloor(g_cpDiff[cpnum][other]) / 60) % 60
-			int srCPSecond = RoundToFloor(g_cpDiff[cpnum][other]) % 60
-			FinishMSG(other, false, false, true, false, true, cpnum, personalHour, personalMinute, personalSecond, srCPHour, srCPMinute, srCPSecond)
+			g_cpTime[cpnum] = results.FetchFloat(0)
+			if(g_cpTimeClient[cpnum][other] < g_cpTime[cpnum])
+			{
+				g_cpDiff[cpnum][other] = g_cpTime[cpnum] - g_cpTimeClient[cpnum][other]
+				int srCPHour = (RoundToFloor(g_cpDiff[cpnum][other]) / 3600) % 24
+				int srCPMinute = (RoundToFloor(g_cpDiff[cpnum][other]) / 60) % 60
+				int srCPSecond = RoundToFloor(g_cpDiff[cpnum][other]) % 60
+				FinishMSG(other, false, false, true, false, true, cpnum, personalHour, personalMinute, personalSecond, srCPHour, srCPMinute, srCPSecond)
+			}
+			else
+			{
+				g_cpDiff[cpnum][other] = g_cpTimeClient[cpnum][other] - g_cpTime[cpnum]
+				int srCPHour = (RoundToFloor(g_cpDiff[cpnum][other]) / 3600) % 24
+				int srCPMinute = (RoundToFloor(g_cpDiff[cpnum][other]) / 60) % 60
+				int srCPSecond = RoundToFloor(g_cpDiff[cpnum][other]) % 60
+				FinishMSG(other, false, false, true, false, false, cpnum, personalHour, personalMinute, personalSecond, srCPHour, srCPMinute, srCPSecond)
+			}
 		}
 		else
-		{
-			g_cpDiff[cpnum][other] = g_cpTimeClient[cpnum][other] - g_cpTime[cpnum]
-			int srCPHour = (RoundToFloor(g_cpDiff[cpnum][other]) / 3600) % 24
-			int srCPMinute = (RoundToFloor(g_cpDiff[cpnum][other]) / 60) % 60
-			int srCPSecond = RoundToFloor(g_cpDiff[cpnum][other]) % 60
-			FinishMSG(other, false, false, true, false, false, cpnum, personalHour, personalMinute, personalSecond, srCPHour, srCPMinute, srCPSecond)
-		}
+			FinishMSG(other, false, false, true, true, false, cpnum, personalHour, personalMinute, personalSecond)
 	}
-	else
-		FinishMSG(other, false, false, true, true, false, cpnum, personalHour, personalMinute, personalSecond)
 }
 
 void SQLSetTries(Database db, DBResultSet results, const char[] error, any data)
 {
+	if(strlen(error))
+		PrintToServer("SQLSetTries: %s", error)
 }
 
 Action cmd_createzones(int args)
@@ -2062,20 +2220,20 @@ Action cmd_createzones(int args)
 
 void SQLConnect(Database db, const char[] error, any data)
 {
-	if(!db)
+	if(db)
 	{
-		PrintToServer("Failed to connect to database")
-		return
+		PrintToServer("Successfuly connected to database.") //https://hlmod.ru/threads/sourcepawn-urok-13-rabota-s-bazami-dannyx-mysql-sqlite.40011/
+		g_mysql = db
+		g_mysql.SetCharset("utf8") //https://github.com/shavitush/bhoptimer/blob/master/addons/sourcemod/scripting/shavit-core.sp#L2883
+		ForceZonesSetup() //https://sm.alliedmods.net/new-api/dbi/__raw
+		g_dbPassed = true //https://github.com/shavitush/bhoptimer/blob/master/addons/sourcemod/scripting/shavit-stats.sp#L199
+		char query[512]
+		Format(query, 512, "SELECT time FROM records WHERE map = '%s' ORDER BY time LIMIT 1", g_map)
+		g_mysql.Query(SQLGetServerRecord, query)
+		RecalculatePoints()
 	}
-	PrintToServer("Successfuly connected to database.") //https://hlmod.ru/threads/sourcepawn-urok-13-rabota-s-bazami-dannyx-mysql-sqlite.40011/
-	g_mysql = db
-	g_mysql.SetCharset("utf8") //https://github.com/shavitush/bhoptimer/blob/master/addons/sourcemod/scripting/shavit-core.sp#L2883
-	ForceZonesSetup() //https://sm.alliedmods.net/new-api/dbi/__raw
-	g_dbPassed = true //https://github.com/shavitush/bhoptimer/blob/master/addons/sourcemod/scripting/shavit-stats.sp#L199
-	char query[512]
-	Format(query, 512, "SELECT time FROM records WHERE map = '%s' ORDER BY time LIMIT 1", g_map)
-	g_mysql.Query(SQLGetServerRecord, query)
-	RecalculatePoints()
+	else
+		PrintToServer("Failed to connect to database. (%s)", error)
 }
 
 void ForceZonesSetup()
@@ -2087,38 +2245,53 @@ void ForceZonesSetup()
 
 void SQLSetZoneStart(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.FetchRow())
+	if(strlen(error))
+		PrintToServer("SQLSetZoneStart: %s", error)
+	else
 	{
-		g_zoneStartOrigin[0][0] = results.FetchFloat(0)
-		g_zoneStartOrigin[0][1] = results.FetchFloat(1)
-		g_zoneStartOrigin[0][2] = results.FetchFloat(2)
-		g_zoneStartOrigin[1][0] = results.FetchFloat(3)
-		g_zoneStartOrigin[1][1] = results.FetchFloat(4)
-		g_zoneStartOrigin[1][2] = results.FetchFloat(5)
-		CreateStart()
-		char query[512]
-		Format(query, 512, "SELECT possition_x, possition_y, possition_z, possition_x2, possition_y2, possition_z2 FROM zones WHERE map = '%s' AND type = 1 LIMIT 1", g_map)
-		g_mysql.Query(SQLSetZoneEnd, query)
+		if(results.FetchRow())
+		{
+			g_zoneStartOrigin[0][0] = results.FetchFloat(0)
+			g_zoneStartOrigin[0][1] = results.FetchFloat(1)
+			g_zoneStartOrigin[0][2] = results.FetchFloat(2)
+			g_zoneStartOrigin[1][0] = results.FetchFloat(3)
+			g_zoneStartOrigin[1][1] = results.FetchFloat(4)
+			g_zoneStartOrigin[1][2] = results.FetchFloat(5)
+			CreateStart()
+			char query[512]
+			Format(query, 512, "SELECT possition_x, possition_y, possition_z, possition_x2, possition_y2, possition_z2 FROM zones WHERE map = '%s' AND type = 1 LIMIT 1", g_map)
+			g_mysql.Query(SQLSetZoneEnd, query)
+		}
 	}
 }
 
 void SQLSetZoneEnd(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.FetchRow())
+	if(strlen(error))
+		PrintToServer("SQLSetZoneEnd: %s", error)
+	else
 	{
-		g_zoneEndOrigin[0][0] = results.FetchFloat(0)
-		g_zoneEndOrigin[0][1] = results.FetchFloat(1)
-		g_zoneEndOrigin[0][2] = results.FetchFloat(2)
-		g_zoneEndOrigin[1][0] = results.FetchFloat(3)
-		g_zoneEndOrigin[1][1] = results.FetchFloat(4)
-		g_zoneEndOrigin[1][2] = results.FetchFloat(5)
-		CreateEnd()
+		if(results.FetchRow())
+		{
+			g_zoneEndOrigin[0][0] = results.FetchFloat(0)
+			g_zoneEndOrigin[0][1] = results.FetchFloat(1)
+			g_zoneEndOrigin[0][2] = results.FetchFloat(2)
+			g_zoneEndOrigin[1][0] = results.FetchFloat(3)
+			g_zoneEndOrigin[1][1] = results.FetchFloat(4)
+			g_zoneEndOrigin[1][2] = results.FetchFloat(5)
+			CreateEnd()
+		}
 	}
 }
 
 void SQLCreateZonesTable(Database db, DBResultSet results, const char[] error, any data)
 {
-	PrintToServer("Zones table is successfuly created.")
+	if(strlen(error))
+		PrintToServer("SQLCreateZonesTable: %s", error)
+	else
+	{
+		PrintToServer("Zones table is successfuly created.")
+	}
 }
 
 void DrawZone(int client, float life)
