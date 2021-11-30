@@ -219,14 +219,19 @@ void SaveRecord(int client, char[] path, float time)
 
 void SQLGetName(Database db, DBResultSet results, const char[] error, any data)
 {
-	if(results.FetchRow())
+	if(strlen(error))
+		PrintToServer("SQLGetName: %s", error)
+	else
 	{
-		char name[MAX_NAME_LENGTH]
-		results.FetchString(0, name, MAX_NAME_LENGTH)
-		Format(name, MAX_NAME_LENGTH, "RECORD %s", name)
-		for(int i = 1; i <= MaxClients; i++)
-			if(IsClientInGame(i) && IsFakeClient(i) && IsPlayerAlive(i))
-				SetClientName(i, name)
+		if(results.FetchRow())
+		{
+			char name[MAX_NAME_LENGTH]
+			results.FetchString(0, name, MAX_NAME_LENGTH)
+			Format(name, MAX_NAME_LENGTH, "RECORD %s", name)
+			for(int i = 1; i <= MaxClients; i++)
+				if(IsClientInGame(i) && IsFakeClient(i) && IsPlayerAlive(i))
+					SetClientName(i, name)
+		}
 	}
 }
 
