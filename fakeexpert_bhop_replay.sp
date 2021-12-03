@@ -295,7 +295,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 {
 	if(IsFakeClient(client) && IsPlayerAlive(client) && g_tick[0] < g_tick[1] && g_loaded)
 	{
-		vel[0] = 0.0 //prevent crashes.
+		vel[0] = 0.0 //prevent shakes at flat surface.
 		vel[1] = 0.0
 		vel[2] = 0.0
 		eFrame frame
@@ -305,7 +305,6 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		float velPos[3]
 		MakeVectorFromPoints(posPrev, frame.pos, velPos)
 		ScaleVector(velPos, g_tickrate)
-		buttons = frame.buttons
 		float ang[3]
 		ang[0] = frame.ang[0]
 		ang[1] = frame.ang[1]
@@ -318,14 +317,17 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		if(g_flagsLast[client] & FL_ONGROUND && !(frame.flags & FL_ONGROUND) && g_DoAnimationEvent != INVALID_HANDLE)
 			SDKCall(g_DoAnimationEvent, g_Linux ? EntIndexToEntRef(client) : client, 3, 0)
 		g_flagsLast[client] = frame.flags
-		SetEntityMoveType(client, frame.movetype)
+		MoveType movetype = MOVETYPE_NOCLIP
+		if(frame.movetype == MOVETYPE_LADDER)
+			movetype = frame.movetype
+		SetEntityMoveType(client, movetype)
 		if(frame.weapon)
 		{
 			for(int i = 0; i < sizeof(g_weaponName); i++)
 			{
 				if(frame.weapon == i + 1)
 				{
-					FakeClientCommand(client, "use weapon_%s", g_weaponName[i])
+					FakeClientCommandEx(client, "use weapon_%s", g_weaponName[i])
 					break
 				}
 			}
@@ -336,6 +338,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 			TeleportEntity(client, NULL_VECTOR, ang, velPos)
 		else if(g_tick[0] == g_tick[1])
 			TeleportEntity(client, frame.pos, ang, NULL_VECTOR)
+		buttons = frame.buttons
 		g_time = GetGameTime()
 	}
 	else if(IsFakeClient(client) && IsPlayerAlive(client) && GetGameTime() - g_time > 3.0 && g_loaded)
