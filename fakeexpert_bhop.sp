@@ -150,6 +150,7 @@ public void OnPluginStart()
 	HookEvent("player_jump", OnJump)
 	AddCommandListener(joinclass, "joinclass")
 	AddCommandListener(showbriefing, "showbriefing")
+	AddCommandListener(headtrack_reset_home_pos, "headtrack_reset_home_pos")
 	LoadTranslations("test.phrases") //https://wiki.alliedmods.net/Translations_(SourceMod_Scripting)
 	g_start = CreateGlobalForward("Bhop_Start", ET_Hook, Param_Cell)
 	g_record = CreateGlobalForward("Bhop_Record", ET_Hook, Param_Cell, Param_Float)
@@ -518,6 +519,12 @@ int menu_info_handler(Menu menu, MenuAction action, int param1, int param2)
 			}
 		}
 	}
+}
+
+Action headtrack_reset_home_pos(int client, const char[] command, int argc)
+{
+	if(!g_menuOpened[client])
+		Bhop(client)
 }
 
 Action cmd_checkpoint(int client, int args)
@@ -901,6 +908,35 @@ void Restart(int client, bool posKeep = false)
 				TeleportEntity(client, posKeep ? NULL_VECTOR : g_cpOriginStart, NULL_VECTOR, g_velJump[client] > 278.0 + 10.0 ? velNull : NULL_VECTOR)
 				if(g_menuOpened[client])
 					Bhop(client)
+			}
+			else
+			{
+				int entity
+				bool ct
+				bool t
+				while((entity = FindEntityByClassname(entity, "info_player_counterterrorist")) > 0)
+				{
+					ct = true
+					break
+				}
+				while((entity = FindEntityByClassname(entity, "info_player_terrorist")) > 0)
+				{
+					if(!ct)
+						t = true
+					break
+				}
+				if(ct)
+				{
+					CS_SwitchTeam(client, CS_TEAM_CT) //https://github.com/shavitush/bhoptimer/blob/master/addons/sourcemod/scripting/shavit-misc.sp#L2066
+					CS_RespawnPlayer(client)
+					Restart(client)
+				}
+				if(t)
+				{
+					CS_SwitchTeam(client, CS_TEAM_T)
+					CS_RespawnPlayer(client)
+					Restart(client)
+				}
 			}
 		}
 	}
