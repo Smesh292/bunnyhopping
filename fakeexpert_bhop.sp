@@ -149,6 +149,7 @@ public void OnPluginStart()
 	HookEvent("player_death", OnDeath)
 	HookEvent("player_jump", OnJump)
 	AddCommandListener(joinclass, "joinclass")
+	AddCommandListener(showbriefing, "showbriefing")
 	LoadTranslations("test.phrases") //https://wiki.alliedmods.net/Translations_(SourceMod_Scripting)
 	g_start = CreateGlobalForward("Bhop_Start", ET_Hook, Param_Cell)
 	g_record = CreateGlobalForward("Bhop_Record", ET_Hook, Param_Cell, Param_Float)
@@ -485,6 +486,38 @@ Action timer_respawn(Handle timer, int client)
 {
 	if(IsClientInGame(client) && !IsPlayerAlive(client))
 		CS_RespawnPlayer(client)
+}
+
+Action showbriefing(int client, const char[] command, int argc)
+{
+	Menu menu = new Menu(menu_info_handler)
+	menu.SetTitle("Control")
+	menu.AddItem("js", "!js")
+	menu.AddItem("ssj", "!ssj")
+	menu.AddItem("hud", "!hud")
+	menu.AddItem("spec", "!spec")
+	menu.Display(client, 20)
+}
+
+int menu_info_handler(Menu menu, MenuAction action, int param1, int param2)
+{
+	switch(action)
+	{
+		case MenuAction_Select:
+		{
+			switch(param2)
+			{
+				case 0:
+					FakeClientCommand(param1, "sm_js")
+				case 1:
+					FakeClientCommand(param1, "sm_ssj")
+				case 2:
+					cmd_hud(param1, 0)
+				case 3:
+					cmd_spec(param1, 0)
+			}
+		}
+	}
 }
 
 Action cmd_checkpoint(int client, int args)
@@ -2614,7 +2647,7 @@ void Noclip(int client)
 
 Action cmd_spec(int client, int args)
 {
-	ChangeClientTeam(client, 1)
+	ChangeClientTeam(client, CS_TEAM_SPECTATOR)
 	return Plugin_Handled
 }
 
