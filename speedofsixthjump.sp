@@ -261,65 +261,21 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 	g_dotTime[client] = GetEngineTime()
 	if(g_jumpCount[client] <= 6)
 	{
-		float vecOrigin[3]
-		float vecPos[3]
-		GetClientAbsOrigin(client, vecOrigin)
-		float rayBuffer[4]
-		for(int i = 0; i <= 3; i++)
-		{
-			float doPos[2][3]
-			switch(i)
-			{
-				case 0:
-				{
-					doPos[0][0] = vecOrigin[0] + 16.0
-					doPos[0][1] = vecOrigin[1] - 16.0
-					doPos[0][2] = vecOrigin[2]
-					doPos[1][0] = vecOrigin[0] + 16.0
-					doPos[1][1] = vecOrigin[1] - 16.0
-					doPos[1][2] = vecOrigin[2] - 90.0
-				}
-				case 1:
-				{
-					doPos[0][0] = vecOrigin[0] + 16.0
-					doPos[0][1] = vecOrigin[1] + 16.0
-					doPos[0][2] = vecOrigin[2]
-					doPos[1][0] = vecOrigin[0] + 16.0
-					doPos[1][1] = vecOrigin[1] + 16.0
-					doPos[1][2] = vecOrigin[2] - 90.0
-				}
-				case 2:
-				{
-					doPos[0][0] = vecOrigin[0] - 16.0
-					doPos[0][1] = vecOrigin[1] + 16.0
-					doPos[0][2] = vecOrigin[2]
-					doPos[1][0] = vecOrigin[0] - 16.0
-					doPos[1][1] = vecOrigin[1] + 16.0
-					doPos[1][2] = vecOrigin[2] - 90.0
-				}
-				case 3:
-				{
-					doPos[0][0] = vecOrigin[0] - 16.0
-					doPos[0][1] = vecOrigin[1] - 16.0
-					doPos[0][2] = vecOrigin[2]
-					doPos[1][0] = vecOrigin[0] - 16.0
-					doPos[1][1] = vecOrigin[1] - 16.0
-					doPos[1][2] = vecOrigin[2] - 90.0
-				}
-			}
-			Handle trace = TR_TraceRayFilterEx(doPos[0], doPos[1], MASK_PLAYERSOLID, RayType_EndPoint, TraceEntityFilterPlayer, client) //https://forums.alliedmods.net/showpost.php?p=1042515&postcount=4
-			if(TR_DidHit(trace))
-			{
-				TR_GetEndPosition(vecPos, trace)
-				rayBuffer[i] = vecPos[2]
-			}
-			delete trace
-		}
-		float groundPos
-		for(int i = 0; i <= 3; i++)
-			if(FloatAbs(groundPos) < FloatAbs(rayBuffer[i]))
-				groundPos = rayBuffer[i]
-		g_groundPos[client][g_jumpCount[client]] = groundPos
+		float origin[3]
+		GetClientAbsOrigin(client, origin)
+		float originDir[3]
+		GetClientAbsOrigin(client, originDir)
+		originDir[2] -= 1.0
+		float mins[3]
+		GetClientMins(client, mins)
+		float maxs[3]
+		GetClientMaxs(client, maxs)
+		Handle trace = TR_TraceHullFilterEx(origin, originDir, mins, maxs, MASK_PLAYERSOLID, TraceEntityFilterPlayer, client)
+		float pos[3]
+		if(TR_DidHit(trace))
+			TR_GetEndPosition(pos, trace)
+		delete trace
+		g_groundPos[client][g_jumpCount[client]] = pos[2]
 	}
 	if(g_jumpCount[client] == 6)
 	{
