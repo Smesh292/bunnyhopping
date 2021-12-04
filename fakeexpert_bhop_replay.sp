@@ -270,8 +270,6 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 {
 	if(Trikz_GetTimerState(client) && g_frame[client])
 	{
-		if(g_frame[client].Length <= g_tickcount[client])
-			g_frame[client].Resize(g_tickcount[client] + (RoundToCeil(g_tickrate) * 2))
 		eFrame frame
 		GetClientAbsOrigin(client, frame.pos)
 		float ang[3]
@@ -287,6 +285,8 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 			frame.weapon = g_weapon[client]
 			g_weapon[client] = 0
 		}
+		if(g_frame[client].Length <= g_tickcount[client])
+			g_frame[client].Resize(g_tickcount[client] + (RoundToCeil(g_tickrate) * 2))
 		g_frame[client].SetArray(g_tickcount[client]++, frame, sizeof(eFrame))
 	}
 }
