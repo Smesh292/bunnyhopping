@@ -270,11 +270,10 @@ void OnJump(Event event, const char[] name, bool dontBroadcast)
 		GetClientMins(client, mins)
 		float maxs[3]
 		GetClientMaxs(client, maxs)
-		Handle trace = TR_TraceHullFilterEx(origin, originDir, mins, maxs, MASK_PLAYERSOLID, TraceEntityFilterPlayer, client)
+		TR_TraceHullFilter(origin, originDir, mins, maxs, MASK_PLAYERSOLID, TraceEntityFilterPlayer, client)
 		float pos[3]
-		if(TR_DidHit(trace))
-			TR_GetEndPosition(pos, trace)
-		delete trace
+		if(TR_DidHit())
+			TR_GetEndPosition(pos)
 		g_groundPos[client][g_jumpCount[client]] = pos[2]
 	}
 	if(g_jumpCount[client] == 6)
