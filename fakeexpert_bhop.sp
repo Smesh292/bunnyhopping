@@ -803,7 +803,8 @@ void Restart(int client, bool posKeep = false)
 				}
 				char classname[32]
 				int weapon = GetPlayerWeaponSlot(client, CS_SLOT_SECONDARY)
-				GetEntityClassname(weapon, classname, 32)
+				if(IsValidEntity(weapon))
+					GetEntityClassname(weapon, classname, 32)
 				bool defaultpistol
 				if(StrEqual(classname, "weapon_glock") || StrEqual(classname, "weapon_usp"))
 					defaultpistol = true
