@@ -493,6 +493,7 @@ Action showbriefing(int client, const char[] command, int argc)
 {
 	Menu menu = new Menu(menu_info_handler)
 	menu.SetTitle("Control")
+	menu.AddItem("top", "!top")
 	menu.AddItem("js", "!js")
 	menu.AddItem("ssj", "!ssj")
 	menu.AddItem("hud", "!hud")
@@ -509,12 +510,14 @@ int menu_info_handler(Menu menu, MenuAction action, int param1, int param2)
 			switch(param2)
 			{
 				case 0:
-					FakeClientCommand(param1, "sm_js")
+					cmd_top(param1, 0)
 				case 1:
-					FakeClientCommand(param1, "sm_ssj")
+					FakeClientCommand(param1, "sm_js")
 				case 2:
-					cmd_hud(param1, 0)
+					FakeClientCommand(param1, "sm_ssj")
 				case 3:
+					cmd_hud(param1, 0)
+				case 4:
 					cmd_spec(param1, 0)
 			}
 		}
