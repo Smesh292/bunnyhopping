@@ -91,7 +91,7 @@ int g_afkClient
 bool g_hudVel[MAXPLAYERS + 1]
 float g_hudTime[MAXPLAYERS + 1]
 char g_clantag[MAXPLAYERS + 1][2][256]
-Handle g_clantagTimer[MAXPLAYERS + 1]
+//Handle g_clantagTimer[MAXPLAYERS + 1]
 int g_points[MAXPLAYERS + 1]
 Handle g_start
 Handle g_record
@@ -1771,7 +1771,8 @@ Action SDKEndTouch(int entity, int other)
 	{
 		g_state[other] = true
 		g_timerTimeStart[other] = GetEngineTime()
-		g_clantagTimer[other] = CreateTimer(0.1, timer_clantag, other, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE)
+		//g_clantagTimer[other] = CreateTimer(0.1, timer_clantag, other, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE)
+		CreateTimer(0.1, timer_clantag, other, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE)
 		for(int i = 1; i <= g_cpCount; i++)
 		{
 			g_cp[i][other] = false
@@ -1814,7 +1815,8 @@ Action SDKTouch(int entity, int other)
 			{
 				g_state[other] = true
 				g_timerTimeStart[other] = GetEngineTime()
-				g_clantagTimer[other] = CreateTimer(0.1, timer_clantag, other, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE)
+				//g_clantagTimer[other] = CreateTimer(0.1, timer_clantag, other, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE)
+				CreateTimer(0.1, timer_clantag, other, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE)
 				for(int i = 1; i <= g_cpCount; i++)
 				{
 					g_cp[i][other] = false
