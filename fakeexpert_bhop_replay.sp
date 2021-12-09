@@ -285,6 +285,27 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 			frame.weapon = g_weapon[client]
 			g_weapon[client] = 0
 		}
+		else
+		{
+			if(!g_tick[client])
+			{
+				char weaponName[32]
+				GetClientWeapon(client, weaponName, 32)
+				for(int i = 0; i < sizeof(g_weaponName); i++)
+				{
+					if(frame.weapon == i + 1)
+					{
+						char format[32]
+						Format(format, 32, "weapon_%s", g_weaponName[i])
+						if(StrEqual(weaponName, g_weaponName[i]))
+						{
+							frame.weapon = i + 1
+							break
+						}
+					}
+				}
+			}
+		}
 		if(g_frame[client].Length <= g_tickcount[client])
 			g_frame[client].Resize(g_tickcount[client] + (RoundToCeil(g_tickrate) * 2))
 		g_frame[client].SetArray(g_tickcount[client]++, frame, sizeof(eFrame))
