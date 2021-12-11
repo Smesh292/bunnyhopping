@@ -668,7 +668,7 @@ void SQLAddUser(Database db, DBResultSet results, const char[] error, any data)
 			}
 			else
 			{
-				Format(query, 512, "INSERT INTO users (username, steamid, firstjoin, lastjoin) VALUES ('%N', %i, %i, %i)", client, steamid, GetTime(), GetTime())
+				Format(query, 512, "INSERT INTO users (username, steamid, firstjoin, lastjoin) VALUES (\"%N\", %i, %i, %i)", client, steamid, GetTime(), GetTime())
 				g_mysql.Query(SQLUserAdded, query)
 			}
 		}
@@ -695,9 +695,9 @@ void SQLUpdateUsername(Database db, DBResultSet results, const char[] error, any
 			char query[512]
 			int steamid = GetSteamAccountID(client)
 			if(results.FetchRow())
-				Format(query, 512, "UPDATE users SET username = '%N', lastjoin = %i WHERE steamid = %i LIMIT 1", client, GetTime(), steamid)
+				Format(query, 512, "UPDATE users SET username = \"%N\", lastjoin = %i WHERE steamid = %i LIMIT 1", client, GetTime(), steamid)
 			else
-				Format(query, 512, "INSERT INTO users (username, steamid, firstjoin, lastjoin) VALUES ('%N', %i, %i, %i)", client, steamid, GetTime(), GetTime())
+				Format(query, 512, "INSERT INTO users (username, steamid, firstjoin, lastjoin) VALUES (\"%N\", %i, %i, %i)", client, steamid, GetTime(), GetTime())
 			g_mysql.Query(SQLUpdateUsernameSuccess, query, GetClientSerial(client), DBPrio_High)
 		}
 	}
