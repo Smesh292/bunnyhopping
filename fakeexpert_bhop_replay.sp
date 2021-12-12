@@ -287,7 +287,7 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 		}
 		else
 		{
-			if(!g_tick[client])
+			if(!g_tickcount[client])
 			{
 				char weaponName[32]
 				GetClientWeapon(client, weaponName, 32)
