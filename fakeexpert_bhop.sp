@@ -268,7 +268,7 @@ void SQLRecalculatePoints3(Database db, DBResultSet results, const char[] error,
 		while(results.FetchRow())
 		{
 			char query[512]
-			Format(query, 512, "SELECT MAX(points) FROM records WHERE playerid = %i GROUP BY map", results.FetchInt(0))
+			Format(query, 512, "SELECT MAX(points) FROM records WHERE playerid = %i GROUP BY map", results.FetchInt(0)) //https://1drv.ms/u/s!Aq4KvqCyYZmHgpFWHdgkvSKx0wAi0w?e=7eShgc
 			g_mysql.Query(SQLRecalculateUserPoints, query, results.FetchInt(0))
 		}
 	}
